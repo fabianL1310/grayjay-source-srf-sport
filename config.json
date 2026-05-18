@@ -8,7 +8,7 @@
   "repositoryUrl": "https://github.com/fabianL1310/grayjay-source-srf-sport",
   "scriptUrl": "./script.js",
   "version": 1,
-  "iconUrl": "",
+  "iconUrl": "./icon.png",
   "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3e",
   "packages": ["Http"],
   "allowEval": false,
