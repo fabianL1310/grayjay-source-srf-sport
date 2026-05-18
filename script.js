@@ -43,6 +43,14 @@ function getPluginId() {
     return _config.id || (typeof config !== 'undefined' ? config.id : "");
 }
 
+function getYesterdayDate() {
+    var d = new Date();
+    d.setDate(d.getDate() - 1);
+    var month = d.getMonth() + 1;
+    var day = d.getDate();
+    return d.getFullYear() + "-" + (month < 10 ? "0" + month : month) + "-" + (day < 10 ? "0" + day : day);
+}
+
 function mapMediaToVideo(media) {
     var isLive = media.type === "LIVESTREAM" || media.type === "SCHEDULED_LIVESTREAM";
     var thumbnailUrl = media.imageUrl || (media.episode ? media.episode.imageUrl : "") || "";
@@ -74,10 +82,30 @@ function mapMediaToVideo(media) {
     });
 }
 
+function isSportEvent(media) {
+    // Full sport events are long-duration EPISODEs (not clips/interviews)
+    // CLIPs (show.title = "Sport-Clip") are short: interviews, highlights, moments
+    // EPISODEs from magazine shows are analyses/summaries
+    // A "sport event" recording is an EPISODE that is NOT from an analysis/magazine show
+    if (media.type === "SCHEDULED_LIVESTREAM" || media.type === "LIVESTREAM") return true;
+    if (media.type === "CLIP") return false;
+    // For EPISODEs: filter out known analysis/magazine show titles
+    var showTitle = (media.show ? media.show.title : "") || "";
+    var lower = showTitle.toLowerCase();
+    var analysisKeywords = ["magazin", "panorama", "lounge", "aktuell", "show", "dok", "reportage", "inside", "talk", "highlights"];
+    for (var i = 0; i < analysisKeywords.length; i++) {
+        if (lower.indexOf(analysisKeywords[i]) >= 0) return false;
+    }
+    // Keep EPISODEs with duration > 20 minutes that aren't analysis shows
+    return (media.duration || 0) > 1200000;
+}
+
 var _config = {};
+var _settings = {};
 
 source.enable = function(conf, settings, savedState) {
     _config = conf;
+    _settings = settings || {};
     log("SRF Sport plugin enabled");
 };
 
@@ -85,7 +113,9 @@ source.disable = function() {};
 
 source.getHome = function() {
     var videos = [];
+    var sportEventsOnly = _settings.sportEventsOnly === true || _settings.sportEventsOnly === "true";
 
+    // Upcoming scheduled sport livestreams
     try {
         var liveResp = http.GET(IL_BASE + "/srf/mediaList/video/scheduledLivestreams?pageSize=20", {}, false);
         if (liveResp.isOk) {
@@ -105,6 +135,38 @@ source.getHome = function() {
         log("SRF: Error fetching livestreams: " + e);
     }
 
+    // Yesterday's sport episodes (episodesByDate, client-side filtered)
+    try {
+        var yesterday = getYesterdayDate();
+        var yResp = http.GET(IL_BASE + "/srf/mediaList/video/episodesByDate/" + yesterday + "?pageSize=100", {}, false);
+        if (yResp.isOk) {
+            var yData = JSON.parse(yResp.body);
+            if (yData.mediaList) {
+                for (var i = 0; i < yData.mediaList.length; i++) {
+                    var media = yData.mediaList[i];
+                    // Only include sport-topic items
+                    var isSport = false;
+                    if (media.show && media.show.topicList) {
+                        for (var t = 0; t < media.show.topicList.length; t++) {
+                            if (media.show.topicList[t].id === SPORT_TOPIC_ID || media.show.topicList[t].title === "Sport") {
+                                isSport = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!isSport) continue;
+                    if (sportEventsOnly && !isSportEvent(media)) continue;
+                    videos.push(mapMediaToVideo(media));
+                }
+            }
+        } else {
+            log("SRF: episodesByDate failed: " + yResp.code);
+        }
+    } catch (e) {
+        log("SRF: Error fetching yesterday's episodes: " + e);
+    }
+
+    // Latest sport VODs
     var nextUrl = null;
     try {
         var vodResp = http.GET(IL_BASE + "/srf/mediaList/video/latestByTopic/" + SPORT_TOPIC_ID + "?pageSize=20", {}, false);
@@ -112,6 +174,8 @@ source.getHome = function() {
             var vodData = JSON.parse(vodResp.body);
             if (vodData.mediaList) {
                 for (var i = 0; i < vodData.mediaList.length; i++) {
+                    var media = vodData.mediaList[i];
+                    if (sportEventsOnly && !isSportEvent(media)) continue;
                     videos.push(mapMediaToVideo(vodData.mediaList[i]));
                 }
             }
@@ -182,7 +246,9 @@ source.search = function(query, type, order, filters) {
                     media = item.mediaList[0];
                 }
                 if (media && media.id && media.urn) {
-                    videos.push(mapMediaToVideo(media));
+                    if (!(_settings.sportEventsOnly === true || _settings.sportEventsOnly === "true") || isSportEvent(media)) {
+                        videos.push(mapMediaToVideo(media));
+                    }
                 }
             }
             nextUrl = data.next || null;
@@ -215,7 +281,9 @@ class SRFSearchPager extends VideoPager {
                         media = item.mediaList[0];
                     }
                     if (media && media.id && media.urn) {
-                        videos.push(mapMediaToVideo(media));
+                        if (!(_settings.sportEventsOnly === true || _settings.sportEventsOnly === "true") || isSportEvent(media)) {
+                            videos.push(mapMediaToVideo(media));
+                        }
                     }
                 }
                 nextUrl = data.next || null;
@@ -290,6 +358,7 @@ source.getChannel = function(url) {
 source.getChannelContents = function(url, type, order, filters) {
     var parts = url.split("/kategorie/");
     var categoryId = parts.length > 1 ? parts[1] : "andere";
+    var sportEventsOnly = _settings.sportEventsOnly === true || _settings.sportEventsOnly === "true";
     var videos = [];
     var nextUrl = null;
 
@@ -303,7 +372,9 @@ source.getChannelContents = function(url, type, order, filters) {
                     var media = data.mediaList[i];
                     var vidCat = categorizeContent(media.title + " " + ((media.show ? media.show.title : "") || ""));
                     if (vidCat === categoryId || categoryId === "andere") {
-                        videos.push(mapMediaToVideo(media));
+                        if (!sportEventsOnly || isSportEvent(media)) {
+                            videos.push(mapMediaToVideo(media));
+                        }
                     }
                 }
             }
@@ -323,7 +394,9 @@ source.getChannelContents = function(url, type, order, filters) {
                     if (media.creatorUser !== "MMSport") continue;
                     var vidCat = categorizeContent(media.title);
                     if (vidCat === categoryId || categoryId === "andere") {
-                        videos.push(mapMediaToVideo(media));
+                        if (!sportEventsOnly || isSportEvent(media)) {
+                            videos.push(mapMediaToVideo(media));
+                        }
                     }
                 }
             }
