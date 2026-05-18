@@ -92,12 +92,14 @@ function isSportEvent(media) {
     // For EPISODEs: filter out known analysis/magazine show titles
     var showTitle = (media.show ? media.show.title : "") || "";
     var lower = showTitle.toLowerCase();
-    var analysisKeywords = ["magazin", "panorama", "lounge", "aktuell", "show", "dok", "reportage", "inside", "talk", "highlights"];
+    var analysisKeywords = ["magazin", "panorama", "lounge", "aktuell", "dok", "reportage", "inside", "talk"];
     for (var i = 0; i < analysisKeywords.length; i++) {
         if (lower.indexOf(analysisKeywords[i]) >= 0) return false;
     }
-    // Keep EPISODEs with duration > 20 minutes that aren't analysis shows
-    return (media.duration || 0) > 1200000;
+    // Full match recordings (> 60 min) are always events regardless of show title
+    if ((media.duration || 0) > 3600000) return true;
+    // Keep EPISODEs with duration > 15 minutes that aren't analysis shows
+    return (media.duration || 0) > 900000;
 }
 
 var _config = {};
@@ -169,14 +171,14 @@ source.getHome = function() {
     // Latest sport VODs
     var nextUrl = null;
     try {
-        var vodResp = http.GET(IL_BASE + "/srf/mediaList/video/latestByTopic/" + SPORT_TOPIC_ID + "?pageSize=20", {}, false);
+        var vodResp = http.GET(IL_BASE + "/srf/mediaList/video/latestByTopic/" + SPORT_TOPIC_ID + "?pageSize=50", {}, false);
         if (vodResp.isOk) {
             var vodData = JSON.parse(vodResp.body);
             if (vodData.mediaList) {
                 for (var i = 0; i < vodData.mediaList.length; i++) {
                     var media = vodData.mediaList[i];
                     if (sportEventsOnly && !isSportEvent(media)) continue;
-                    videos.push(mapMediaToVideo(vodData.mediaList[i]));
+                    videos.push(mapMediaToVideo(media));
                 }
             }
             nextUrl = vodData.next || null;
@@ -204,8 +206,11 @@ class SRFHomePager extends VideoPager {
             if (resp.isOk) {
                 var data = JSON.parse(resp.body);
                 if (data.mediaList) {
+                    var sportEventsOnly = _settings.sportEventsOnly === true || _settings.sportEventsOnly === "true";
                     for (var i = 0; i < data.mediaList.length; i++) {
-                        this.results.push(mapMediaToVideo(data.mediaList[i]));
+                        var media = data.mediaList[i];
+                        if (sportEventsOnly && !isSportEvent(media)) continue;
+                        this.results.push(mapMediaToVideo(media));
                     }
                 }
                 this.context.nextUrl = data.next || null;
