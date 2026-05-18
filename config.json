@@ -28,7 +28,7 @@
       "name": "Nur Sport-Events anzeigen",
       "description": "Nur vollständige Sport-Übertragungen anzeigen (keine Analysen, Interviews oder kurzen Clips)",
       "type": "Boolean",
-      "default": false
+      "default": "false"
     }
   ]
 }
