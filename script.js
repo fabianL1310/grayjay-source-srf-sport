@@ -38,6 +38,11 @@ function getVideoUrl(urn) {
     return "https://www.srf.ch/play/tv/redirect/detail/" + parts[parts.length - 1];
 }
 
+function getPluginId() {
+    if (typeof plugin !== 'undefined' && plugin.config) return plugin.config.id;
+    return _config.id || (typeof config !== 'undefined' ? config.id : "");
+}
+
 function mapMediaToVideo(media) {
     var isLive = media.type === "LIVESTREAM" || media.type === "SCHEDULED_LIVESTREAM";
     var thumbnailUrl = media.imageUrl || (media.episode ? media.episode.imageUrl : "") || "";
@@ -52,11 +57,11 @@ function mapMediaToVideo(media) {
     } catch(e) {}
 
     return new PlatformVideo({
-        id: new PlatformID(PLATFORM, media.id, config.id),
+        id: new PlatformID(PLATFORM, media.id, getPluginId()),
         name: media.title || "",
-        thumbnails: new Thumbnails([new Thumbnail(thumbnailUrl, 0)]),
+        thumbnails: thumbnailUrl ? new Thumbnails([new Thumbnail(thumbnailUrl, 0)]) : new Thumbnails([]),
         author: new PlatformAuthorLink(
-            new PlatformID(PLATFORM, categoryId, config.id),
+            new PlatformID(PLATFORM, categoryId, getPluginId()),
             "SRF Sport - " + channelName,
             channelUrl,
             ""
@@ -69,7 +74,10 @@ function mapMediaToVideo(media) {
     });
 }
 
+var _config = {};
+
 source.enable = function(conf, settings, savedState) {
+    _config = conf;
     log("SRF Sport plugin enabled");
 };
 
@@ -126,25 +134,27 @@ class SRFHomePager extends VideoPager {
     }
 
     nextPage() {
-        var videos = [];
-        var nextUrl = null;
+        this.results = [];
+        this.hasMore = false;
 
         try {
+            if (!this.context.nextUrl) return this;
             var resp = http.GET(this.context.nextUrl, {}, false);
             if (resp.isOk) {
                 var data = JSON.parse(resp.body);
                 if (data.mediaList) {
                     for (var i = 0; i < data.mediaList.length; i++) {
-                        videos.push(mapMediaToVideo(data.mediaList[i]));
+                        this.results.push(mapMediaToVideo(data.mediaList[i]));
                     }
                 }
-                nextUrl = data.next || null;
+                this.context.nextUrl = data.next || null;
+                this.hasMore = !!this.context.nextUrl;
             }
         } catch (e) {
             log("SRF: Error in nextPage: " + e);
         }
 
-        return new SRFHomePager(videos, !!nextUrl, nextUrl);
+        return this;
     }
 }
 
@@ -165,7 +175,7 @@ source.search = function(query, type, order, filters) {
     var nextUrl = null;
 
     try {
-        var url = IL_BASE + "/srf/searchResultMedia/video?q=" + encodeURIComponent(query) + "&pageSize=20";
+        var url = IL_BASE + "/srf/searchResultMediaList?q=" + encodeURIComponent(query) + "&topicId=" + SPORT_TOPIC_ID + "&mediaType=VIDEO&pageSize=20";
         var resp = http.GET(url, {}, false);
         if (resp.isOk) {
             var data = JSON.parse(resp.body);
@@ -252,7 +262,7 @@ source.searchChannels = function(query) {
         }
         if (match) {
             channels.push(new PlatformChannel({
-                id: new PlatformID(PLATFORM, id, config.id),
+                id: new PlatformID(PLATFORM, id, getPluginId()),
                 name: "SRF Sport - " + cat.name,
                 thumbnail: "",
                 banner: "",
@@ -275,7 +285,7 @@ source.getChannel = function(url) {
     var categoryId = parts.length > 1 ? parts[1] : "andere";
     var cat = SPORT_CATEGORIES[categoryId] || SPORT_CATEGORIES["andere"];
     return new PlatformChannel({
-        id: new PlatformID(PLATFORM, categoryId, config.id),
+        id: new PlatformID(PLATFORM, categoryId, getPluginId()),
         name: "SRF Sport - " + cat.name,
         thumbnail: "",
         banner: "",
@@ -387,127 +397,4 @@ source.getContentDetails = function(url) {
 
     for (var u = 0; u < urns.length; u++) {
         try {
-            var resp = http.GET(IL_BASE + "/mediaComposition/byUrn/" + urns[u], {}, false);
-            if (resp.isOk) {
-                composition = JSON.parse(resp.body);
-                break;
-            }
-        } catch (e) {}
-    }
-
-    if (!composition) throw new ScriptException("Could not load media composition for: " + videoId);
-
-    var chapter = composition.chapterList && composition.chapterList[0];
-    if (!chapter) throw new ScriptException("No chapter found for: " + videoId);
-
-    var isLive = chapter.type === "LIVESTREAM" || chapter.type === "SCHEDULED_LIVESTREAM" ||
-        (composition.analyticsMetadata && composition.analyticsMetadata.media_is_livestream === "true");
-
-    var showTitle = (composition.show ? composition.show.title : "") || "";
-    var categoryId = categorizeContent((chapter.title || "") + " " + showTitle);
-    var channelName = SPORT_CATEGORIES[categoryId].name;
-
-    // Build sources
-    var videoSources = [];
-    var liveSource = null;
-
-    if (chapter.resourceList) {
-        for (var r = 0; r < chapter.resourceList.length; r++) {
-            var resource = chapter.resourceList[r];
-            if (resource.streaming === "HLS" || resource.protocol === "HLS" || resource.protocol === "HLS-DVR") {
-                var hlsSource = new HLSSource({
-                    name: (resource.quality || "Auto") + " HLS",
-                    duration: Math.floor((chapter.duration || 0) / 1000),
-                    url: resource.url,
-                    priority: true
-                });
-
-                if (isLive || resource.live) {
-                    liveSource = hlsSource;
-                } else {
-                    videoSources.push(hlsSource);
-                }
-            } else if (resource.streaming === "PROGRESSIVE" && resource.mimeType === "video/mp4") {
-                videoSources.push(new VideoUrlSource({
-                    width: resource.quality === "HD" ? 1280 : 640,
-                    height: resource.quality === "HD" ? 720 : 360,
-                    container: "video/mp4",
-                    codec: "h264",
-                    name: (resource.quality || "SD") + " MP4",
-                    bitrate: 0,
-                    duration: Math.floor((chapter.duration || 0) / 1000),
-                    url: resource.url
-                }));
-            } else if (resource.streaming === "DASH" || resource.protocol === "DASH" || resource.protocol === "DASH-DVR") {
-                if (isLive || resource.live) {
-                    liveSource = new DashSource({
-                        name: (resource.quality || "Auto") + " DASH",
-                        duration: Math.floor((chapter.duration || 0) / 1000),
-                        url: resource.url
-                    });
-                } else {
-                    videoSources.push(new DashSource({
-                        name: (resource.quality || "Auto") + " DASH",
-                        duration: Math.floor((chapter.duration || 0) / 1000),
-                        url: resource.url
-                    }));
-                }
-            }
-        }
-    }
-
-    // Build subtitles
-    var subtitles = [];
-    if (chapter.subtitleList) {
-        for (var s = 0; s < chapter.subtitleList.length; s++) {
-            var sub = chapter.subtitleList[s];
-            if (sub.format === "VTT" || (sub.url && sub.url.indexOf(".vtt") >= 0)) {
-                subtitles.push({
-                    name: sub.language || "Deutsch",
-                    url: sub.url,
-                    format: "text/vtt"
-                });
-            }
-        }
-    }
-
-    var thumbnailUrl = chapter.imageUrl || (composition.episode ? composition.episode.imageUrl : "") || "";
-    var description = chapter.lead || chapter.description || (composition.episode ? composition.episode.lead : "") || "";
-
-    var dateStr = chapter.date || (composition.episode ? composition.episode.publishedDate : null);
-    var dateVal = 0;
-    try {
-        if (dateStr) dateVal = Math.floor(new Date(dateStr).getTime() / 1000);
-    } catch(e) {}
-
-    return new PlatformVideoDetails({
-        id: new PlatformID(PLATFORM, videoId, config.id),
-        name: chapter.title || "",
-        thumbnails: new Thumbnails([new Thumbnail(thumbnailUrl, 0)]),
-        author: new PlatformAuthorLink(
-            new PlatformID(PLATFORM, categoryId, config.id),
-            "SRF Sport - " + channelName,
-            getChannelUrl(categoryId),
-            ""
-        ),
-        uploadDate: dateVal,
-        duration: isLive ? 0 : Math.floor((chapter.duration || 0) / 1000),
-        viewCount: 0,
-        url: url,
-        isLive: isLive,
-        description: description,
-        video: new VideoSourceDescriptor(videoSources),
-        live: liveSource,
-        rating: new RatingLikes(0),
-        subtitles: subtitles
-    });
-};
-
-source.getComments = function(url) {
-    return new CommentPager([], false, {});
-};
-source.getSubComments = function(comment) {
-    return new CommentPager([], false, {});
-};
-
-log("SRF Sport plugin loaded");
+            var resp = http.GET(IL_BASE + "/mediaComposition/byUr
