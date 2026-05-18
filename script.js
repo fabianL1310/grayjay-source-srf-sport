@@ -86,7 +86,6 @@ source.disable = function() {};
 source.getHome = function() {
     var videos = [];
 
-    // Get scheduled livestreams (sport events)
     try {
         var liveResp = http.GET(IL_BASE + "/srf/mediaList/video/scheduledLivestreams?pageSize=20", {}, false);
         if (liveResp.isOk) {
@@ -100,13 +99,12 @@ source.getHome = function() {
                 }
             }
         } else {
-            log("SRF: scheduledLivestreams request failed with code " + liveResp.code);
+            log("SRF: scheduledLivestreams failed: " + liveResp.code);
         }
     } catch (e) {
         log("SRF: Error fetching livestreams: " + e);
     }
 
-    // Get latest sport videos
     var nextUrl = null;
     try {
         var vodResp = http.GET(IL_BASE + "/srf/mediaList/video/latestByTopic/" + SPORT_TOPIC_ID + "?pageSize=20", {}, false);
@@ -119,7 +117,7 @@ source.getHome = function() {
             }
             nextUrl = vodData.next || null;
         } else {
-            log("SRF: latestByTopic request failed with code " + vodResp.code);
+            log("SRF: latestByTopic failed: " + vodResp.code);
         }
     } catch (e) {
         log("SRF: Error fetching latest videos: " + e);
@@ -136,7 +134,6 @@ class SRFHomePager extends VideoPager {
     nextPage() {
         this.results = [];
         this.hasMore = false;
-
         try {
             if (!this.context.nextUrl) return this;
             var resp = http.GET(this.context.nextUrl, {}, false);
@@ -151,9 +148,8 @@ class SRFHomePager extends VideoPager {
                 this.hasMore = !!this.context.nextUrl;
             }
         } catch (e) {
-            log("SRF: Error in nextPage: " + e);
+            log("SRF: Error in home nextPage: " + e);
         }
-
         return this;
     }
 }
@@ -173,7 +169,6 @@ source.getSearchCapabilities = function() {
 source.search = function(query, type, order, filters) {
     var videos = [];
     var nextUrl = null;
-
     try {
         var url = IL_BASE + "/srf/searchResultMediaList?q=" + encodeURIComponent(query) + "&topicId=" + SPORT_TOPIC_ID + "&mediaType=VIDEO&pageSize=20";
         var resp = http.GET(url, {}, false);
@@ -192,12 +187,11 @@ source.search = function(query, type, order, filters) {
             }
             nextUrl = data.next || null;
         } else {
-            log("SRF: search failed with code " + resp.code);
+            log("SRF: search failed: " + resp.code);
         }
     } catch (e) {
         log("SRF: Error in search: " + e);
     }
-
     return new SRFSearchPager(videos, !!nextUrl, { query: query, nextUrl: nextUrl });
 };
 
@@ -209,7 +203,6 @@ class SRFSearchPager extends VideoPager {
     nextPage() {
         var videos = [];
         var nextUrl = null;
-
         try {
             var resp = http.GET(this.context.nextUrl, {}, false);
             if (resp.isOk) {
@@ -230,7 +223,6 @@ class SRFSearchPager extends VideoPager {
         } catch (e) {
             log("SRF: Error in search nextPage: " + e);
         }
-
         return new SRFSearchPager(videos, !!nextUrl, { query: this.context.query, nextUrl: nextUrl });
     }
 }
@@ -240,7 +232,6 @@ source.getSearchChannelContentsCapabilities = function() {
 };
 
 source.searchChannelContents = function(url, query, type, order, filters) {
-    // Just return channel contents (no server-side channel search available)
     return source.getChannelContents(url, type, order, filters);
 };
 
@@ -322,7 +313,6 @@ source.getChannelContents = function(url, type, order, filters) {
         log("SRF: Error in getChannelContents: " + e);
     }
 
-    // Also include scheduled livestreams for this category
     try {
         var liveResp = http.GET(IL_BASE + "/srf/mediaList/video/scheduledLivestreams?pageSize=50", {}, false);
         if (liveResp.isOk) {
@@ -353,7 +343,6 @@ class SRFChannelPager extends VideoPager {
     nextPage() {
         var videos = [];
         var nextUrl = null;
-
         try {
             var resp = http.GET(this.context.nextUrl, {}, false);
             if (resp.isOk) {
@@ -372,7 +361,6 @@ class SRFChannelPager extends VideoPager {
         } catch (e) {
             log("SRF: Error in channel nextPage: " + e);
         }
-
         return new SRFChannelPager(videos, !!nextUrl, { url: this.context.url, categoryId: this.context.categoryId, nextUrl: nextUrl });
     }
 }
@@ -382,19 +370,5 @@ source.isContentDetailsUrl = function(url) {
 };
 
 source.getContentDetails = function(url) {
-    // Extract video ID from URL
     var idMatch = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
-    if (!idMatch) throw new ScriptException("Cannot extract video ID from URL: " + url);
-
-    var videoId = idMatch[1];
-
-    // Try regular video URN first, then scheduled_livestream URN
-    var composition = null;
-    var urns = [
-        "urn:srf:video:" + videoId,
-        "urn:srf:scheduled_livestream:video:" + videoId
-    ];
-
-    for (var u = 0; u < urns.length; u++) {
-        try {
-            var resp = http.GET(IL_BASE + "/mediaComposition/byUr
+    if (!idMatch) throw new ScriptException("Cannot extract video ID from URL: " +
