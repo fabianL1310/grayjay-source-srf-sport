@@ -43,12 +43,22 @@ function getPluginId() {
     return _config.id || (typeof config !== 'undefined' ? config.id : "");
 }
 
-function getYesterdayDate() {
-    var d = new Date();
-    d.setDate(d.getDate() - 1);
+function formatDate(d) {
     var month = d.getMonth() + 1;
     var day = d.getDate();
     return d.getFullYear() + "-" + (month < 10 ? "0" + month : month) + "-" + (day < 10 ? "0" + day : day);
+}
+
+function getYesterdayDate() {
+    var d = new Date();
+    d.setDate(d.getDate() - 1);
+    return formatDate(d);
+}
+
+function getDateDaysAgo(n) {
+    var d = new Date();
+    d.setDate(d.getDate() - n);
+    return formatDate(d);
 }
 
 function mapMediaToVideo(media) {
@@ -83,23 +93,22 @@ function mapMediaToVideo(media) {
 }
 
 function isSportEvent(media) {
-    // Full sport events are long-duration EPISODEs (not clips/interviews)
-    // CLIPs (show.title = "Sport-Clip") are short: interviews, highlights, moments
-    // EPISODEs from magazine shows are analyses/summaries
-    // A "sport event" recording is an EPISODE that is NOT from an analysis/magazine show
+    log("isSportEvent check: type=" + media.type + " duration=" + media.duration + " show=" + (media.show ? media.show.title : "none") + " cesimId=" + (media.cesimId || "none"));
     if (media.type === "SCHEDULED_LIVESTREAM" || media.type === "LIVESTREAM") return true;
+    if (media.cesimId) return true;
     if (media.type === "CLIP") return false;
-    // For EPISODEs: filter out known analysis/magazine show titles
     var showTitle = (media.show ? media.show.title : "") || "";
     var lower = showTitle.toLowerCase();
+    // "sportlive" or "sport live" shows are always events
+    if (lower.indexOf("sportlive") >= 0 || lower.indexOf("sport live") >= 0) return true;
     var analysisKeywords = ["magazin", "panorama", "lounge", "aktuell", "dok", "reportage", "inside", "talk"];
     for (var i = 0; i < analysisKeywords.length; i++) {
         if (lower.indexOf(analysisKeywords[i]) >= 0) return false;
     }
-    // Full match recordings (> 60 min) are always events regardless of show title
-    if ((media.duration || 0) > 3600000) return true;
-    // Keep EPISODEs with duration > 15 minutes that aren't analysis shows
-    return (media.duration || 0) > 900000;
+    var durationMs = media.duration || 0;
+    if (durationMs > 0 && durationMs < 100000) durationMs = durationMs * 1000;
+    if (durationMs > 3600000) return true;
+    return durationMs > 900000;
 }
 
 var _config = {};
@@ -137,35 +146,37 @@ source.getHome = function() {
         log("SRF: Error fetching livestreams: " + e);
     }
 
-    // Yesterday's sport episodes (episodesByDate, client-side filtered)
-    try {
-        var yesterday = getYesterdayDate();
-        var yResp = http.GET(IL_BASE + "/srf/mediaList/video/episodesByDate/" + yesterday + "?pageSize=100", {}, false);
-        if (yResp.isOk) {
-            var yData = JSON.parse(yResp.body);
-            if (yData.mediaList) {
-                for (var i = 0; i < yData.mediaList.length; i++) {
-                    var media = yData.mediaList[i];
-                    // Only include sport-topic items
-                    var isSport = false;
-                    if (media.show && media.show.topicList) {
-                        for (var t = 0; t < media.show.topicList.length; t++) {
-                            if (media.show.topicList[t].id === SPORT_TOPIC_ID || media.show.topicList[t].title === "Sport") {
-                                isSport = true;
-                                break;
+    // Recent sport episodes (today, yesterday, 2 days ago)
+    var daysToFetch = [0, 1, 2];
+    for (var d = 0; d < daysToFetch.length; d++) {
+        try {
+            var dateStr = getDateDaysAgo(daysToFetch[d]);
+            var yResp = http.GET(IL_BASE + "/srf/mediaList/video/episodesByDate/" + dateStr + "?pageSize=100", {}, false);
+            if (yResp.isOk) {
+                var yData = JSON.parse(yResp.body);
+                if (yData.mediaList) {
+                    for (var i = 0; i < yData.mediaList.length; i++) {
+                        var media = yData.mediaList[i];
+                        var isSport = false;
+                        if (media.show && media.show.topicList) {
+                            for (var t = 0; t < media.show.topicList.length; t++) {
+                                if (media.show.topicList[t].id === SPORT_TOPIC_ID || media.show.topicList[t].title === "Sport") {
+                                    isSport = true;
+                                    break;
+                                }
                             }
                         }
+                        if (!isSport) continue;
+                        if (sportEventsOnly && !isSportEvent(media)) continue;
+                        videos.push(mapMediaToVideo(media));
                     }
-                    if (!isSport) continue;
-                    if (sportEventsOnly && !isSportEvent(media)) continue;
-                    videos.push(mapMediaToVideo(media));
                 }
+            } else {
+                log("SRF: episodesByDate failed for " + dateStr + ": " + yResp.code);
             }
-        } else {
-            log("SRF: episodesByDate failed: " + yResp.code);
+        } catch (e) {
+            log("SRF: Error fetching episodes for date: " + e);
         }
-    } catch (e) {
-        log("SRF: Error fetching yesterday's episodes: " + e);
     }
 
     // Latest sport VODs
@@ -448,16 +459,46 @@ source.isContentDetailsUrl = function(url) {
 };
 
 source.getContentDetails = function(url) {
-    var idMatch = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
-    if (!idMatch) throw new ScriptException("Cannot extract video ID from URL: " + url);
+    var videoId = null;
+    var urn = null;
 
-    var videoId = idMatch[1];
+    // Check for resultcenter live URL with cesimId
+    var cesimMatch = url.match(/\/resultcenter\/live\/[^\/]+\/(\d+)/);
+    if (cesimMatch) {
+        var cesimId = cesimMatch[1];
+        try {
+            var liveResp = http.GET(IL_BASE + "/srf/mediaList/video/scheduledLivestreams?pageSize=50", {}, false);
+            if (liveResp.isOk) {
+                var liveData = JSON.parse(liveResp.body);
+                if (liveData.mediaList) {
+                    for (var i = 0; i < liveData.mediaList.length; i++) {
+                        if (String(liveData.mediaList[i].cesimId) === cesimId) {
+                            videoId = liveData.mediaList[i].id;
+                            urn = liveData.mediaList[i].urn;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            log("SRF: Error looking up cesimId: " + e);
+        }
+        if (!videoId) throw new ScriptException("Could not find livestream for cesimId: " + cesimId);
+    }
+
+    if (!videoId) {
+        var idMatch = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
+        if (!idMatch) throw new ScriptException("Cannot extract video ID from URL: " + url);
+        videoId = idMatch[1];
+    }
 
     var composition = null;
-    var urns = [
-        "urn:srf:video:" + videoId,
-        "urn:srf:scheduled_livestream:video:" + videoId
-    ];
+    var urns = [];
+    if (urn) {
+        urns.push(urn);
+    }
+    urns.push("urn:srf:video:" + videoId);
+    urns.push("urn:srf:scheduled_livestream:video:" + videoId);
 
     for (var u = 0; u < urns.length; u++) {
         try {
