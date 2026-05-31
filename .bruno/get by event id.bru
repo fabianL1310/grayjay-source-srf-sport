@@ -1,0 +1,30 @@
+meta {
+  name: get by event id
+  type: http
+  seq: 2
+}
+
+get {
+  url: https://event.api.swisstxt.ch/v2/events/srf/byEventItemId/?eids=1840108,1837712,1830818
+  body: none
+  auth: inherit
+}
+
+params:query {
+  eids: 1840108,1837712,1830818
+}
+
+headers {
+  User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0
+  Accept: */*
+  Accept-Language: en
+  Sec-GPC: 1
+  Sec-Fetch-Dest: empty
+  Sec-Fetch-Mode: cors
+  Sec-Fetch-Site: cross-site
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -7,28 +7,18 @@
   "sourceUrl": "https://raw.githubusercontent.com/fabianL1310/grayjay-source-srf-sport/refs/heads/main/config.json",
   "repositoryUrl": "https://github.com/fabianL1310/grayjay-source-srf-sport",
   "scriptUrl": "./script.js",
-  "version": 1,
+  "version": 2,
   "iconUrl": "./icon.png",
   "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3e",
   "packages": ["Http"],
   "allowEval": false,
   "allowUrls": [
-    "il.srf.ch",
-    "il.srgssr.ch",
-    "srf.ch",
-    "www.srf.ch",
-    "download-media.srf.ch",
-    "srf-vod-amd.akamaized.net",
-    "lsvs-srf1-d.akamaized.net",
-    "akamaized.net"
+    "sport.api.swisstxt.ch",
+    "event.api.swisstxt.ch",
+    "tp.srgssr.ch",
+    "srgssrlsvech-d.akamaized.net",
+    "akamaized.net",
+    "cdn-csd.swisstxt.ch"
   ],
-  "settings": [
-    {
-      "variable": "sportEventsOnly",
-      "name": "Nur Sport-Events anzeigen",
-      "description": "Nur vollständige Sport-Übertragungen anzeigen (keine Analysen, Interviews oder kurzen Clips)",
-      "type": "Boolean",
-      "default": "false"
-    }
-  ]
+  "settings": []
 }

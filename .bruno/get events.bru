@@ -1,0 +1,22 @@
+meta {
+  name: get events
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://sport.api.swisstxt.ch/v1/live_events?lang=de&date=2026-05-31&ignoreLCNextDay=true
+  body: none
+  auth: inherit
+}
+
+params:query {
+  lang: de
+  date: 2026-05-31
+  ignoreLCNextDay: true
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
