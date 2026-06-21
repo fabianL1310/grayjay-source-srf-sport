@@ -5,13 +5,21 @@ meta {
 }
 
 get {
-  url: https://tp.srgssr.ch/akahd/token?acl=/out/v1/c91a0d5344ef496bb324a5d2261f22cb/*
+  url: https://tp.srgssr.ch/akahd/token?acl={{acl}}
   body: none
   auth: inherit
 }
 
 params:query {
-  acl: /out/v1/c91a0d5344ef496bb324a5d2261f22cb/*
+  acl: {{acl}}
+}
+
+script:pre-request {
+  bru.setVar("acl", bru.getVar("hlsPath").replace(/[^\/]*$/, "*"))
+}
+
+script:post-response {
+  bru.setVar("authParams", res.body.token.authparams.replace(/^hdnts=/,""))
 }
 
 settings {

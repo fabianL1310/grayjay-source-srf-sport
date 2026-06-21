@@ -137,9 +137,15 @@ function fetchAkamaiAuthparams(hlsUrl) {
     return authparams;
 }
 
-function authenticatedMasterUrl(hlsUrl) {
+function authenticatedMasterUrl(hlsUrl, startTime) {
     const authparams = fetchAkamaiAuthparams(hlsUrl);
-    return hlsUrl + (hlsUrl.indexOf("?") === -1 ? "?" : "&") + authparams;
+    let url = hlsUrl + (hlsUrl.indexOf("?") === -1 ? "?" : "&") + authparams;
+    if (startTime) {
+        const u = new URL(url);
+        u.searchParams.set("start", String(startTime));
+        url = u.toString();
+    }
+    return url;
 }
 
 // Resolve a possibly relative URI against a base URL.
@@ -169,8 +175,8 @@ function appendStartZero(url) {
 
 // Fetch the live/DVR master manifest, rewrite variant URIs so the player gets the full
 // recording instead of the last ~30 s of the sliding window. Returned as a data: URL.
-function buildFullDvrMasterDataUrl(hlsUrl) {
-    const masterUrl = authenticatedMasterUrl(hlsUrl);
+function buildFullDvrMasterDataUrl(hlsUrl, startTime) {
+    const masterUrl = authenticatedMasterUrl(hlsUrl, startTime);
     const resp = http.GET(masterUrl, DEFAULT_HEADERS, false);
     if (!resp.isOk) {
         throw new ScriptException("Failed to fetch master manifest (" + resp.code + ")");
@@ -390,12 +396,13 @@ source.getContentDetails = function (url) {
         // Always rewrite the master to force ?start=0 on variants. Without this,
         // MediaPackage serves only the last ~30 s of the sliding DVR window
         // (even for finished events that have ENDLIST in the variant playlist).
+        const startTime = toUnix(detail.startDate);
         let manifestUrl;
         try {
-            manifestUrl = buildFullDvrMasterDataUrl(detail.hls);
+            manifestUrl = buildFullDvrMasterDataUrl(detail.hls, startTime);
         } catch (e) {
             log("SRF: manifest rewrite failed, falling back to raw master: " + e);
-            manifestUrl = authenticatedMasterUrl(detail.hls);
+            manifestUrl = authenticatedMasterUrl(detail.hls, startTime);
         }
 
         const hls = new HLSSource({

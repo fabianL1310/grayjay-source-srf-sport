@@ -24,6 +24,12 @@ headers {
   Sec-Fetch-Site: cross-site
 }
 
+script:post-response {
+  const { pathname, search, hash } = new URL(res.body[0].hls);
+
+  bru.setVar("hlsPath", pathname + search + hash)
+}
+
 settings {
   encodeUrl: true
   timeout: 0

@@ -5,13 +5,19 @@ meta {
 }
 
 get {
-  url: https://srgssrlsvech-d.akamaized.net/out/v1/c91a0d5344ef496bb324a5d2261f22cb/index.m3u8?hdnts=exp=1780249902~acl=/out/v1/c91a0d5344ef496bb324a5d2261f22cb/*~hmac=7065654a61fafc8e34155fc5eedbe44bf0352d0d42aa34356b1d9fcfb50d8d6e
+  url: https://srgssrlsvech-d.akamaized.net/:hlsPath?hdnts={{authParams}}&start=1781999400
   body: none
   auth: inherit
 }
 
 params:query {
-  hdnts: exp=1780249902~acl=/out/v1/c91a0d5344ef496bb324a5d2261f22cb/*~hmac=7065654a61fafc8e34155fc5eedbe44bf0352d0d42aa34356b1d9fcfb50d8d6e
+  hdnts: {{authParams}}
+  start: 1781999400
+  ~end: 1782007326
+}
+
+params:path {
+  hlsPath: {{hlsPath}}
 }
 
 settings {
