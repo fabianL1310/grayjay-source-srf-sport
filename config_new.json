@@ -1,0 +1,24 @@
+{
+  "name": "SRF Sport",
+  "description": "SRF Sport - Swiss public broadcaster sports content including live streams, highlights, and replays",
+  "author": "me",
+  "authorUrl": "https://example.com",
+  "platformUrl": "https://www.srf.ch/sport",
+  "sourceUrl": "https://raw.githubusercontent.com/fabianL1310/grayjay-source-srf-sport/refs/heads/main/config_new.json",
+  "repositoryUrl": "https://github.com/fabianL1310/grayjay-source-srf-sport",
+  "scriptUrl": "./script_new.js",
+  "version": 5,
+  "iconUrl": "./icon.png",
+  "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3e",
+  "packages": ["Http"],
+  "allowEval": false,
+  "allowUrls": [
+    "sport.api.swisstxt.ch",
+    "event.api.swisstxt.ch",
+    "tp.srgssr.ch",
+    "srgssrlsvech-d.akamaized.net",
+    "akamaized.net",
+    "cdn-csd.swisstxt.ch"
+  ],
+  "settings": []
+}
