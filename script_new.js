@@ -78,7 +78,7 @@ const fetchEventDetails = (eventIds) => {
 };
 
 // TODO refactor this
-function sortHomeEvents(events, details) {
+/*function sortHomeEvents(events, details) {
     const rank = (event) => {
         const detail = details[event.id];
         // TODO description is like never provided so remove it
@@ -96,17 +96,10 @@ function sortHomeEvents(events, details) {
         const tb = toUnix((b.dateTimeInfo || {}).fullDateTime);
         return ra === 1 ? ta - tb : tb - ta;
     });
-}
+} */
 
 const getPlatformVideo = (details) => {
-    const category = (details.category || "").toLowerCase(); // past | live | upcoming
-
-    const state =
-        category === "live"
-            ? "live"
-            : category === "upcoming"
-              ? "upcoming"
-              : "past";
+    const state = (details.category || "").toLowerCase(); // past | live | future
 
     return new PlatformVideo({
         id: new PlatformID(PLATFORM, details.eventItemId, _config.id),
@@ -114,12 +107,11 @@ const getPlatformVideo = (details) => {
         thumbnails: new Thumbnails([new Thumbnail(details.imageUrl)]),
         author: getAuthor(details.sport),
         uploadDate: Math.round(new Date(details.startDate).getTime() / 1000),
-        duration: Math.round(details.duration / (60 * 1000)),
+        duration: Math.round(details.duration / 1000),
         viewCount: 1,
         // TODO make to URL helper/const
         url: `https://www.srf.ch/sport/resultcenter/live/${details.sport}/${details.eventItemId}`,
-        // TODO maybe true when planned?
-        isLive: state === "live",
+        isLive: state === "live" || state === "future",
     });
 };
 
@@ -132,8 +124,12 @@ const getAuthHlsUrl = (hls) => {
     if (!authparams) throw new ScriptException("Failed to get auth token");
 
     const authHlsUrl = new URL(hls);
-    authHlsUrl.searchParams.set("hdnts", authparams);
+    authHlsUrl.searchParams.set("hdnts", authparams.replace("hdnts=", ""));
     authHlsUrl.searchParams.set("start", "0");
+
+    log("authHLS URL: " + authHlsUrl.toString());
+    log(http.GET(authHlsUrl.toString(), {}, false));
+
     return authHlsUrl.toString();
 };
 
@@ -183,36 +179,53 @@ source.getContentDetails = (url) => {
     if (!details) throw new ScriptException("Event not found: " + eventId);
 
     const plattformVideo = getPlatformVideo(details);
-    const videoSourceDescriptor = new VideoSourceDescriptor([
-        new HLSSource({
-            name: "HLS",
-            duration: plattformVideo.duration,
-            url: getAuthHlsUrl(details.hls),
-            // TODO maybe use settings lang
-            language: details.analyticsMetadata.media_language,
-        }),
-    ]);
+    // const videoSourceDescriptor = new VideoSourceDescriptor([
+    //     new HLSSource({
+    //         name: "HLS",
+    //         duration: plattformVideo.duration,
+    //         url: getAuthHlsUrl(details.hls),
+    //         // TODO maybe use settings lang
+    //         language: details.analyticsMetadata.media_language,
+    //     }),
+    // ]);
 
     // TODO maybe set the not needed one to null
-    const videoSource = {};
-    const startDate = new Date(details.startDate);
-    const endDate = new Date(details.endDate);
-    if (startDate < new Date()) {
-        // Stream is available
-        if (endDate < new Date()) {
-            videoSource.video = videoSourceDescriptor;
-        } else {
-            videoSource.live = videoSourceDescriptor;
-        }
-    }
+    // const videoSource = {};
+    // const startDate = new Date(details.startDate);
+    // const endDate = new Date(details.endDate);
+    // if (startDate < new Date()) {
+    //     // Stream is available
+    //     if (endDate < new Date()) {
+    //         videoSource.hls = videoSourceDescriptor;
+    //     } else {
+    //         videoSource.live = videoSourceDescriptor;
+    //     }
+    // }
     // TODO maybe do this:
     // else{
     //   // videoSource.video = new VideoSourceDescriptor([])
     // }
+
+    const hlsSource = new HLSSource({
+        name: "HLS",
+        duration: plattformVideo.duration,
+        url: getAuthHlsUrl(details.hls),
+        // url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        language: details.analyticsMetadata.media_language,
+    });
+
+    const videoSource = {
+        // live: hlsSource,
+        video: new VideoSourceDescriptor([hlsSource]),
+    };
 
     return new PlatformVideoDetails({
         ...plattformVideo,
         ...videoSource,
         description: details.description || "",
     });
+};
+
+source.isContentDetailsUrl = (url) => {
+    return url.startsWith("https://www.srf.ch/sport/resultcenter/live");
 };
