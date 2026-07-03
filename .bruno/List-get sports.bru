@@ -1,0 +1,20 @@
+meta {
+  name: List/get sports
+  type: http
+  seq: 5
+}
+
+get {
+  url: https://sport.api.swisstxt.ch/v1/sports/:key
+  body: none
+  auth: inherit
+}
+
+params:path {
+  key: football
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

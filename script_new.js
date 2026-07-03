@@ -11,9 +11,19 @@ const TOKEN_URL = "https://tp.srgssr.ch/akahd/token";
 const STREAM_URL = "https://srgssrlsvech-d.akamaized.net";
 
 let _config = {};
+var _settings = {};
 
-source.enable = function (config) {
+source.enable = function (config, settings) {
     _config = config || {};
+    _settings = settings || {};
+};
+
+source.setSettings = function (settings) {
+    _settings = settings;
+};
+
+source.reEnable = (config, settings) => {
+    return source.enable(config ?? _config, settings ?? _settings);
 };
 
 source.disable = function () {};
@@ -22,8 +32,8 @@ source.disable = function () {};
 // Helpers
 // ---------------------------------------------------------------------------
 
+// TODO caching?
 const fetchJson = (url) => {
-    log("SRF: fetching JSON from " + url);
     const response = http.GET(url.toString(), {}, false);
     if (!response.isOk) {
         throw new ScriptException(
@@ -77,41 +87,28 @@ const fetchEventDetails = (eventIds) => {
     }
 };
 
-// TODO refactor this
-/*function sortHomeEvents(events, details) {
-    const rank = (event) => {
-        const detail = details[event.id];
-        // TODO description is like never provided so remove it
-        const cat =
-            (detail && (detail.category || "").toLowerCase()) || event.state;
-        if (cat === "live" || event.state === "Live") return 0;
-        if (cat === "upcoming" || event.state === "Planned") return 1;
-        return 2;
-    };
-    return events.slice().sort((a, b) => {
-        const ra = rank(a),
-            rb = rank(b);
-        if (ra !== rb) return ra - rb;
-        const ta = toUnix((a.dateTimeInfo || {}).fullDateTime);
-        const tb = toUnix((b.dateTimeInfo || {}).fullDateTime);
-        return ra === 1 ? ta - tb : tb - ta;
-    });
-} */
+const sortDetails = (a, b) => {
+    if (_settings.showLiveFirst && a.category !== b.category) {
+        if (a.category === "present") return -1;
+        if (b.category === "present") return 1;
+    }
+    return new Date(a.startDate) - new Date(b.startDate);
+};
 
-const getPlatformVideo = (details) => {
-    const state = (details.category || "").toLowerCase(); // past | live | future
+const getPlatformVideo = (detail) => {
+    const state = (detail.category || "").toLowerCase(); // past | present | future
 
     return new PlatformVideo({
-        id: new PlatformID(PLATFORM, details.eventItemId, _config.id),
-        name: details.title || "Event " + details.eventItemId,
-        thumbnails: new Thumbnails([new Thumbnail(details.imageUrl)]),
-        author: getAuthor(details.sport),
-        uploadDate: Math.round(new Date(details.startDate).getTime() / 1000),
-        duration: Math.round(details.duration / 1000),
+        id: new PlatformID(PLATFORM, detail.eventItemId, _config.id),
+        name: detail.title || "Event " + detail.eventItemId,
+        thumbnails: new Thumbnails([new Thumbnail(detail.imageUrl)]),
+        author: getAuthor(detail.sport),
+        uploadDate: Math.round(new Date(detail.startDate).getTime() / 1000),
+        duration: Math.round(detail.duration / 1000),
         viewCount: 1,
         // TODO make to URL helper/const
-        url: `https://www.srf.ch/sport/resultcenter/live/${details.sport}/${details.eventItemId}`,
-        isLive: state === "live" || state === "future",
+        url: `https://www.srf.ch/sport/resultcenter/live/${detail.sport}/${detail.eventItemId}`,
+        isLive: state === "present" || state === "future",
     });
 };
 
@@ -126,9 +123,6 @@ const getAuthHlsUrl = (hls) => {
     const authHlsUrl = new URL(hls);
     authHlsUrl.searchParams.set("hdnts", authparams.replace("hdnts=", ""));
     authHlsUrl.searchParams.set("start", "0");
-
-    log("authHLS URL: " + authHlsUrl.toString());
-    log(http.GET(authHlsUrl.toString(), {}, false));
 
     return authHlsUrl.toString();
 };
@@ -158,19 +152,14 @@ source.getHome = () => {
     }
     const ids = events.map((e) => e.id);
     const details = fetchEventDetails(ids);
-    // const videos =
-    //     // sortHomeEvents(events, details)
-    //     events
-    //         .filter((event) => details[event.id])
-    //         .map((event) => getPlatformVideo(details[event.id]));
-    const videos = Object.values(details).map((detail) =>
-        getPlatformVideo(detail),
-    );
+
+    const videos = Object.values(details)
+        .sort(sortDetails)
+        .map(getPlatformVideo);
     return new VideoPager(videos, false, {});
 };
 
 source.getContentDetails = (url) => {
-    log("-------------------getContentDetails: " + url);
     url = new URL(url);
     const eventId = url.pathname.split("/").pop();
     if (!eventId) throw new ScriptException("Invalid event URL: " + url);

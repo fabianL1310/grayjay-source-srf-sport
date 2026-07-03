@@ -15,7 +15,7 @@ params:query {
 }
 
 script:pre-request {
-  bru.setVar("acl", bru.getVar("hlsPath").replace(/[^\/]*$/, "*"))
+  bru.setVar("acl", "/" + bru.getVar("hlsPath").replace(/[^\/]*$/, "*"))
 }
 
 script:post-response {
