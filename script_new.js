@@ -122,6 +122,7 @@ const getAuthHlsUrl = (hls) => {
 
     const authHlsUrl = new URL(hls);
     authHlsUrl.searchParams.set("hdnts", authparams.replace("hdnts=", ""));
+    // TODO use actual start and end times
     authHlsUrl.searchParams.set("start", "0");
 
     return authHlsUrl.toString();
@@ -135,6 +136,7 @@ source.getHome = () => {
     let events = [];
     const url = new URL(EVENTS_URL);
     try {
+      // date is not needed to get todays events
         url.searchParams.set("date", getDateString());
         events.push(...fetchJson(url));
         url.searchParams.set(
@@ -168,49 +170,33 @@ source.getContentDetails = (url) => {
     if (!details) throw new ScriptException("Event not found: " + eventId);
 
     const plattformVideo = getPlatformVideo(details);
-    // const videoSourceDescriptor = new VideoSourceDescriptor([
-    //     new HLSSource({
-    //         name: "HLS",
-    //         duration: plattformVideo.duration,
-    //         url: getAuthHlsUrl(details.hls),
-    //         // TODO maybe use settings lang
-    //         language: details.analyticsMetadata.media_language,
-    //     }),
-    // ]);
 
-    // TODO maybe set the not needed one to null
-    // const videoSource = {};
-    // const startDate = new Date(details.startDate);
-    // const endDate = new Date(details.endDate);
-    // if (startDate < new Date()) {
-    //     // Stream is available
-    //     if (endDate < new Date()) {
-    //         videoSource.hls = videoSourceDescriptor;
-    //     } else {
-    //         videoSource.live = videoSourceDescriptor;
-    //     }
-    // }
-    // TODO maybe do this:
-    // else{
-    //   // videoSource.video = new VideoSourceDescriptor([])
-    // }
+    const getVideoSource = () => {
+        if (new Date(details.startDate) > new Date()) {
+            return {
+                hls: null,
+                live: null,
+                video: new VideoSourceDescriptor([]),
+            };
+        }
 
-    const hlsSource = new HLSSource({
-        name: "HLS",
-        duration: plattformVideo.duration,
-        url: getAuthHlsUrl(details.hls),
-        // url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        language: details.analyticsMetadata.media_language,
-    });
+        const hlsSource = new HLSSource({
+            name: "HLS",
+            duration: plattformVideo.duration,
+            url: getAuthHlsUrl(details.hls),
+            language: details.analyticsMetadata.media_language,
+        });
 
-    const videoSource = {
-        // live: hlsSource,
-        video: new VideoSourceDescriptor([hlsSource]),
+        return {
+            hls: hlsSource,
+            live: plattformVideo.isLive ? hlsSource : null,
+            video: new VideoSourceDescriptor([hlsSource]),
+        };
     };
 
     return new PlatformVideoDetails({
         ...plattformVideo,
-        ...videoSource,
+        ...getVideoSource(),
         description: details.description || "",
     });
 };
