@@ -112,8 +112,8 @@ const getPlatformVideo = (detail) => {
     });
 };
 
-const getAuthHlsUrl = (hls) => {
-    hls = new URL(hls);
+const getAuthHlsUrl = (details) => {
+    const hls = new URL(details.hls);
     const acl = hls.pathname.replace(/index\.m3u8$/, "*");
     const tokenUrl = new URL(TOKEN_URL);
     tokenUrl.searchParams.set("acl", acl);
@@ -122,8 +122,14 @@ const getAuthHlsUrl = (hls) => {
 
     const authHlsUrl = new URL(hls);
     authHlsUrl.searchParams.set("hdnts", authparams.replace("hdnts=", ""));
-    // TODO use actual start and end times
-    authHlsUrl.searchParams.set("start", "0");
+    authHlsUrl.searchParams.set(
+        "start",
+        Math.floor(new Date(details.startDate).getTime() / 1000),
+    );
+    authHlsUrl.searchParams.set(
+        "end",
+        Math.floor(new Date(details.endDate).getTime() / 1000),
+    );
 
     return authHlsUrl.toString();
 };
@@ -136,7 +142,7 @@ source.getHome = () => {
     let events = [];
     const url = new URL(EVENTS_URL);
     try {
-      // date is not needed to get todays events
+        // date is not needed to get todays events
         url.searchParams.set("date", getDateString());
         events.push(...fetchJson(url));
         url.searchParams.set(
@@ -183,7 +189,7 @@ source.getContentDetails = (url) => {
         const hlsSource = new HLSSource({
             name: "HLS",
             duration: plattformVideo.duration,
-            url: getAuthHlsUrl(details.hls),
+            url: getAuthHlsUrl(details),
             language: details.analyticsMetadata.media_language,
         });
 
