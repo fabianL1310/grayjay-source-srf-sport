@@ -1,0 +1,21 @@
+meta {
+  name: Get eventy by contest
+  type: http
+  seq: 3
+}
+
+get {
+  url: https://sport.api.swisstxt.ch/v1/live_events
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~contestId: 5193
+  ~lang: de
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

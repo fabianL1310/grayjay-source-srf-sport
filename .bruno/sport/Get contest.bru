@@ -1,0 +1,25 @@
+meta {
+  name: Get contest
+  type: http
+  seq: 2
+}
+
+get {
+  url: https://sport.api.swisstxt.ch/v1/:sport/:contest?lang=de
+  body: none
+  auth: inherit
+}
+
+params:query {
+  lang: de
+}
+
+params:path {
+  contest: wmn
+  sport: football
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -5,15 +5,16 @@ meta {
 }
 
 get {
-  url: https://sport.api.swisstxt.ch/v1/live_events?lang=de&date=2026-05-31&ignoreLCNextDay=true
+  url: https://sport.api.swisstxt.ch/v1/live_events?lang=de&ignoreLCNextDay=true
   body: none
   auth: inherit
 }
 
 params:query {
   lang: de
-  date: 2026-05-31
   ignoreLCNextDay: true
+  ~contestId: 
+  ~date: 2026-07-04
 }
 
 settings {

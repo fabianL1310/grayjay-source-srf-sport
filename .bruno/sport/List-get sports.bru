@@ -1,13 +1,17 @@
 meta {
   name: List/get sports
   type: http
-  seq: 5
+  seq: 1
 }
 
 get {
   url: https://sport.api.swisstxt.ch/v1/sports/:key
   body: none
   auth: inherit
+}
+
+params:query {
+  ~lang: de
 }
 
 params:path {
