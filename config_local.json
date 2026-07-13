@@ -1,15 +1,15 @@
 {
   "name": "SRF Sport",
-  "description": "SRF Sport - Swiss public broadcaster sports content including live streams, highlights, and replays",
-  "author": "me",
-  "authorUrl": "https://example.com",
+  "description": "Plugin for events broadcasted by SRF Sport",
+  "author": "Fabian",
+  "authorUrl": "http://github.com/fabianL1310",
   "platformUrl": "https://www.srf.ch/sport",
   "sourceUrl": "http://localhost:3000/config_local.json",
   "repositoryUrl": "http://localhost:3000",
-  "scriptUrl": "./script_new.js",
-  "version": 6,
+  "scriptUrl": "./dist/script.js",
+  "version": 9,
   "iconUrl": "./icon.png",
-  "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3f",
+  "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3e",
   "packages": ["Http"],
   "allowEval": false,
   "allowUrls": [
@@ -17,8 +17,7 @@
     "event.api.swisstxt.ch",
     "tp.srgssr.ch",
     "srgssrlsvech-d.akamaized.net",
-    "akamaized.net",
-    "cdn-csd.swisstxt.ch"
+    "localhost"
   ],
   "settings": [
     {

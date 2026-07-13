@@ -2,7 +2,7 @@
 //Intended exclusively for auto-complete in your IDE, not for execution
 
 declare class ScriptException extends Error {
-    constructor(type: string, msg: string);
+    constructor(msg: string);
 }
 declare class TimeoutException extends ScriptException {
     constructor(msg: string);
@@ -12,7 +12,7 @@ declare class Thumbnails {
     constructor(thumbnails: Thumbnail[])
 }
 declare class Thumbnail {
-    constructor(url, quality) {
+    constructor(url, quality?) {
         this.url = url ?? ""; //string
         this.quality = quality ?? 0; //integer
     }
@@ -34,7 +34,7 @@ declare class FilterCapability {
 
 
 declare class PlatformAuthorLink {
-    constructor(id: PlatformID, name: string, url: string, thumbnail: string, subscribers: integer?);
+    constructor(id: PlatformID, name: string, url: string, thumbnail?: string, subscribers?: integer);
 }
 
 declare interface PlatformVideoDef {
@@ -49,6 +49,8 @@ declare interface PlatformVideoDef {
     viewCount: long,
     isLive: boolean
 }
+
+declare interface PlatformVideo extends PlatformVideoDef {}
 declare class PlatformVideo {
     constructor(obj: PlatformVideoDef);
 }
@@ -61,6 +63,7 @@ declare interface PlatformVideoDetailsDef extends PlatformVideoDef {
     hls: HLSSource?,
     live: SubtitleSource[]
 }
+declare interface PlatformVideoDetails extends PlatformVideoDetailsDef {}
 declare class PlatformVideoDetails extends PlatformVideo {
     constructor(obj: PlatformVideoDetailsDef);
 }
@@ -140,7 +143,8 @@ class YTAudioSource extends AudioUrlSource {
 interface HLSSourceDef {
     name: string,
     duration: integer,
-    url: string
+    url: string,
+    language: string
 }
 class HLSSource implements IVideoSource {
     constructor(obj: HLSSourceDef);
@@ -152,6 +156,10 @@ interface DashSourceDef {
 }
 class DashSource implements IVideoSource {
     constructor(obj: DashSourceDef)
+}
+
+declare class VideoSourceDescriptor {
+  constructor(sources: VideoSource[]);
 }
 
 //Channel
@@ -253,8 +261,13 @@ interface Map<T> {
 
 interface Source {
     getHome(): VideoPager;
+    getContentDetails(url: string): PlatformVideoDetails;
+    isContentDetailsUrl(url: string): boolean
+    setSettings(settings: SourceSettings);
 
-    enable(config: SourceConfig);
+    enable(config: SourceConfig, settings: SourceSettings);
+    reEnable(config: SourceConfig, settings: SourceSettings);
+
     disable();
 
     searchSuggestions(query: string): string[];
@@ -288,7 +301,31 @@ interface Source {
     //Optional
     isPlaylistUrl(url: string): boolean;
     //Optional
-    getPlaylist(url): string[];
+    getPlaylist(url): string[]?;
 }
 
 const source: Source;
+
+
+// http client
+interface HttpHeaders {
+  [key: string]: string;
+}
+
+declare class HttpResponse {
+  url: string;
+  code: number;
+  headers: HttpHeaders;
+  body: string;
+  isOk: boolean;
+}
+
+declare class Http {
+  GET(url: string, headers: HttpHeaders, useAuth?: boolean): HttpResponse;
+  request(method: string, url: string, headers: HttpHeaders, useAuth?: boolean): HttpResponse;
+}
+
+const http: Http;
+
+// logger
+declare function log(message: string): void;
