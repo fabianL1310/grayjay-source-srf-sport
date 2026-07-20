@@ -16,13 +16,11 @@ echo "This is your public key: '$PUBLIC_KEY_PKCS8'"
 
 if [ $# -eq 0 ]; then
   # No parameter provided, read from stdin
-  DATA=$(cat)
+  SIGNATURE=$(openssl dgst -sha512 -sign "$PRIVATE_KEY_PATH" | base64 -w 0)
 else
-  # Parameter provided, read from file
-  DATA=$(cat "$1")
+  # Parameter provided, sign the file's raw bytes (preserves trailing newline)
+  SIGNATURE=$(openssl dgst -sha512 -sign "$PRIVATE_KEY_PATH" < "$1" | base64 -w 0)
 fi
-
-SIGNATURE=$(echo -n "$DATA" | openssl dgst -sha512 -sign "$PRIVATE_KEY_PATH" | base64 -w 0)
 echo "This is your signature: '$SIGNATURE'"
 
 # Write the public key and signature into the config file
