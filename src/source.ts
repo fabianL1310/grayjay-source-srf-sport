@@ -35,8 +35,6 @@ source.getHome = (): VideoPager => {
     let events = [
         ...fetchJson(getEventsUrl()),
         ...fetchJson(getEventsUrl(-1)),
-        ...fetchJson(getEventsUrl(-2)),
-        ...fetchJson(getEventsUrl(-3)),
     ];
     if (!events.length) return new VideoPager([], false, {});
 

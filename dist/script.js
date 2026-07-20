@@ -119,7 +119,8 @@
           // TODO use language set in settings
           sport.name.de,
           getSportPageUrl(sport.key),
-          sport.iconUrl
+          key === "football" ? "https://picsum.photos/200" : sport.iconUrl
+          // sport.iconUrl,
         );
         return acc;
       },
@@ -210,9 +211,7 @@
   source.getHome = () => {
     let events = [
       ...fetchJson(getEventsUrl()),
-      ...fetchJson(getEventsUrl(-1)),
-      ...fetchJson(getEventsUrl(-2)),
-      ...fetchJson(getEventsUrl(-3))
+      ...fetchJson(getEventsUrl(-1))
     ];
     if (!events.length) return new VideoPager([], false, {});
     const ids = events.map((event) => event.id);

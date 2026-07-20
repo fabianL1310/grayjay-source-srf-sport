@@ -23,7 +23,8 @@ export const getAuthors = (keys: string[]) => {
                 // TODO use language set in settings
                 sport.name.de,
                 getSportPageUrl(sport.key),
-                sport.iconUrl,
+                key === "football" ? "https://picsum.photos/200" : sport.iconUrl,
+                // sport.iconUrl,
             );
             return acc;
         },
