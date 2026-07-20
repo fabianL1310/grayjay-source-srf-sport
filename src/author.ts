@@ -1,4 +1,4 @@
-import { getSportUrl, PLATFORM } from "./constants";
+import { getSportPageUrl, getSportUrl, PLATFORM } from "./constants";
 import { batchFetchJson } from "./helpers";
 import { getConfig } from "./state";
 import { Author } from "./types/author.types";
@@ -22,8 +22,7 @@ export const getAuthors = (keys: string[]) => {
                 new PlatformID(PLATFORM, sport.key, configId),
                 // TODO use language set in settings
                 sport.name.de,
-                // TODO
-                `https://sport.api.swisstxt.ch/v1/sports/${sport.key}`,
+                getSportPageUrl(sport.key),
                 sport.iconUrl,
             );
             return acc;

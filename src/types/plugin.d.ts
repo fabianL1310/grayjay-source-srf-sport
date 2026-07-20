@@ -34,6 +34,11 @@ declare class FilterCapability {
 
 
 declare class PlatformAuthorLink {
+    id: PlatformID;
+    name: string;
+    url: string;
+    thumbnail?: string;
+    subscribers?: integer;
     constructor(id: PlatformID, name: string, url: string, thumbnail?: string, subscribers?: integer);
 }
 
@@ -164,10 +169,10 @@ declare class VideoSourceDescriptor {
 
 //Channel
 interface PlatformChannelDef {
-    id: string,
+    id: PlatformID,
     name: string,
-    thumbnail: string,
-    banner: string,
+    thumbnail?: string,
+    banner?: string,
     subscribers: integer,
     description: string,
     url: string,
@@ -282,7 +287,7 @@ interface Source {
     isChannelUrl(url: string): boolean;
     getChannel(url: string): PlatformChannel;
 
-    getChannelVideos(url: string, type: string, order: string, filters): VideoPager;
+    getChannelContents(url: string, type: string, order: string, filters): VideoPager;
     getChannelCapabilities(): ResultCapabilities;
 
     isVideoDetailsUrl(url: string): boolean;

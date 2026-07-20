@@ -48,6 +48,7 @@
   var SPORTS_LIST_URL = "https://sport.api.swisstxt.ch/v1/sports";
   var TOKEN_URL = "https://tp.srgssr.ch/akahd/token";
   var EVENT_PAGE_BASE_URL = "https://www.srf.ch/sport/resultcenter/live";
+  var SPORT_PAGE_BASE_URL = "https://www.srf.ch/sport/";
   var getSportUrl = (sportKey) => {
     const url = new URL(SPORTS_LIST_URL);
     url.pathname += `/${sportKey}`;
@@ -72,6 +73,9 @@
     const url = new URL(EVENTS_URL);
     if (daysDelta) url.searchParams.set("date", getDateString(date));
     return url;
+  };
+  var getSportPageUrl = (sportKey) => {
+    return `${SPORT_PAGE_BASE_URL}${sportKey}`;
   };
 
   // src/state.ts
@@ -114,8 +118,7 @@
           new PlatformID(PLATFORM, sport.key, configId),
           // TODO use language set in settings
           sport.name.de,
-          // TODO
-          `https://sport.api.swisstxt.ch/v1/sports/${sport.key}`,
+          getSportPageUrl(sport.key),
           sport.iconUrl
         );
         return acc;
@@ -205,12 +208,20 @@
   source.disable = () => {
   };
   source.getHome = () => {
-    let events = [...fetchJson(getEventsUrl()), ...fetchJson(getEventsUrl(-1))];
+    let events = [
+      ...fetchJson(getEventsUrl()),
+      ...fetchJson(getEventsUrl(-1)),
+      ...fetchJson(getEventsUrl(-2)),
+      ...fetchJson(getEventsUrl(-3))
+    ];
     if (!events.length) return new VideoPager([], false, {});
     const ids = events.map((event) => event.id);
     const details = fetchEventDetails(ids);
     const videos = getPlatformVideos(details.sort(sortEventDetails));
     return new VideoPager(videos, false, {});
+  };
+  source.isContentDetailsUrl = (url) => {
+    return url.startsWith(EVENT_PAGE_BASE_URL);
   };
   source.getContentDetails = (url) => {
     const eventId = url.split("/").pop();
@@ -241,7 +252,25 @@
       description: detail.description
     });
   };
-  source.isContentDetailsUrl = (url) => {
-    return url.startsWith(EVENT_PAGE_BASE_URL);
+  source.isChannelUrl = (url) => {
+    return url.startsWith(SPORT_PAGE_BASE_URL);
+  };
+  source.getChannel = (url) => {
+    const sportKey = url.split("/").pop();
+    if (!sportKey) throw new ScriptException("Invalid channel URL: " + url);
+    const author = getAuthors([sportKey])[sportKey];
+    return new PlatformChannel({
+      id: author.id,
+      name: author.name,
+      url: author.url,
+      thumbnail: author.thumbnail,
+      banner: author.thumbnail,
+      description: "",
+      links: [],
+      subscribers: 0
+    });
+  };
+  source.getChannelContents = (url) => {
+    return source.getHome();
   };
 })();

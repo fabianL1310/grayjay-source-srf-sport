@@ -12,6 +12,7 @@ export const SPORTS_LIST_URL = "https://sport.api.swisstxt.ch/v1/sports";
 export const TOKEN_URL = "https://tp.srgssr.ch/akahd/token";
 export const STREAM_URL = "https://srgssrlsvech-d.akamaized.net";
 export const EVENT_PAGE_BASE_URL = "https://www.srf.ch/sport/resultcenter/live";
+export const SPORT_PAGE_BASE_URL = "https://www.srf.ch/sport/";
 
 export const getSportUrl = (sportKey: string) => {
     const url = new URL(SPORTS_LIST_URL);
@@ -42,3 +43,7 @@ export const getEventsUrl = (daysDelta = 0) => {
     if (daysDelta) url.searchParams.set("date", getDateString(date));
     return url
 };
+
+export const getSportPageUrl = (sportKey: string) => {
+    return `${SPORT_PAGE_BASE_URL}${sportKey}`;
+}

@@ -1,4 +1,11 @@
-import { EVENT_PAGE_BASE_URL, getEventsUrl } from "./constants";
+import { getAuthors } from "./author";
+import {
+    EVENT_PAGE_BASE_URL,
+    getEventsUrl,
+    getSportUrl,
+    PLATFORM,
+    SPORT_PAGE_BASE_URL,
+} from "./constants";
 import {
     fetchEventDetails,
     getAuthHlsUrl,
@@ -7,6 +14,7 @@ import {
 } from "./eventDetails";
 import { fetchJson } from "./helpers";
 import { getConfig, getSettings, setConfig, setSettings } from "./state";
+import { Author } from "./types/author.types";
 
 source.enable = (config: any, settings: any) => {
     setConfig(config);
@@ -24,7 +32,12 @@ source.reEnable = (config: any, settings: any) => {
 source.disable = () => {};
 
 source.getHome = (): VideoPager => {
-    let events = [...fetchJson(getEventsUrl()), ...fetchJson(getEventsUrl(-1))];
+    let events = [
+        ...fetchJson(getEventsUrl()),
+        ...fetchJson(getEventsUrl(-1)),
+        ...fetchJson(getEventsUrl(-2)),
+        ...fetchJson(getEventsUrl(-3)),
+    ];
     if (!events.length) return new VideoPager([], false, {});
 
     const ids = events.map((event) => event.id);
@@ -32,6 +45,10 @@ source.getHome = (): VideoPager => {
     const videos = getPlatformVideos(details.sort(sortEventDetails));
 
     return new VideoPager(videos, false, {});
+};
+
+source.isContentDetailsUrl = (url: string): boolean => {
+    return url.startsWith(EVENT_PAGE_BASE_URL);
 };
 
 source.getContentDetails = (url: string): PlatformVideoDetails => {
@@ -73,6 +90,29 @@ source.getContentDetails = (url: string): PlatformVideoDetails => {
     } as PlatformVideoDetailsDef);
 };
 
-source.isContentDetailsUrl = (url: string): boolean => {
-    return url.startsWith(EVENT_PAGE_BASE_URL);
+source.isChannelUrl = (url: string): boolean => {
+    return url.startsWith(SPORT_PAGE_BASE_URL);
+};
+
+source.getChannel = (url: string) => {
+    const sportKey = url.split("/").pop();
+    if (!sportKey) throw new ScriptException("Invalid channel URL: " + url);
+
+    const author = getAuthors([sportKey])[sportKey];
+
+    return new PlatformChannel({
+        id: author.id,
+        name: author.name,
+        url: author.url,
+        thumbnail: author.thumbnail,
+        banner: author.thumbnail,
+        description: "",
+        links: [],
+        subscribers: 0,
+    });
+};
+
+// temp
+source.getChannelContents = (url: string) => {
+    return source.getHome();
 };
