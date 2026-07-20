@@ -23,8 +23,7 @@ export const getAuthors = (keys: string[]) => {
                 // TODO use language set in settings
                 sport.name.de,
                 getSportPageUrl(sport.key),
-                key === "football" ? "https://picsum.photos/200" : sport.iconUrl,
-                // sport.iconUrl,
+                sport.iconUrl,
             );
             return acc;
         },
@@ -37,13 +36,13 @@ const getSportIconUrls = (sportKeys: string[]) => {
     const baseUrl = `${sourceUrl.slice(0, sourceUrl.lastIndexOf("/"))}/dist/icons/`;
 
     const responses = batchFetchJson(
-        sportKeys.map((key) => new URL(`${baseUrl}${key}.svg`)),
+        sportKeys.map((key) => new URL(`${baseUrl}${key}.png`)),
         "HEAD",
     );
 
     return responses.reduce((acc, response, index) => {
         if (response.isOk) {
-            acc[sportKeys[index]] = `${baseUrl}${sportKeys[index]}.svg`;
+            acc[sportKeys[index]] = `${baseUrl}${sportKeys[index]}.png`;
         }
         return acc;
     }, {} as Record<string, string>);

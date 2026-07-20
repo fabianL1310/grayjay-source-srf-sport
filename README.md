@@ -10,4 +10,3 @@
 
 # Bugs
 - [ ] video on desktop not working: seems to be because of the proxy
-- [ ] author icons on mobile not working
