@@ -1,25 +1,50 @@
 import { getSportUrl, PLATFORM } from "./constants";
-import { fetchJson } from "./helpers";
+import { batchFetchJson } from "./helpers";
 import { getConfig } from "./state";
+import { Author } from "./types/author.types";
 
-export const getAuthor = (key: string) => {
-    const sport = fetchJson(getSportUrl(key));
+export const getAuthors = (keys: string[]) => {
+    const icons = getSportIconUrls(keys);
+    const sports = batchFetchJson<Author>(keys.map(getSportUrl))
+        .map((res) => res.body)
+        .reduce((acc, sport) => {
+            sport.iconUrl = icons[sport.key];
+            acc[sport.key] = sport;
+            return acc;
+        }, {} as Record<string, Author>);
 
-    return new PlatformAuthorLink(
-        new PlatformID(PLATFORM, sport.key, getConfig("id")),
-        // TODO use language set in settings
-        sport.name.de,
-        // TODO
-        `https://sport.api.swisstxt.ch/v1/sports/${sport.key}`,
-        getSportIconUrl(sport.key),
+    const configId = getConfig("id");
+    return keys.reduce(
+        (acc, key) => {
+            const sport = sports[key];
+            if (!sport) return acc;
+            acc[key] = new PlatformAuthorLink(
+                new PlatformID(PLATFORM, sport.key, configId),
+                // TODO use language set in settings
+                sport.name.de,
+                // TODO
+                `https://sport.api.swisstxt.ch/v1/sports/${sport.key}`,
+                sport.iconUrl,
+            );
+            return acc;
+        },
+        {} as Record<string, PlatformAuthorLink>,
     );
 };
 
-const getSportIconUrl = (sportKey: string) => {
+const getSportIconUrls = (sportKeys: string[]) => {
     const sourceUrl = getConfig<string>("sourceUrl");
+    const baseUrl = `${sourceUrl.slice(0, sourceUrl.lastIndexOf("/"))}/dist/icons/`;
 
-    const url = `${sourceUrl.slice(0, sourceUrl.lastIndexOf("/"))}/dist/icons/${sportKey}.svg`;
-    const response = http.request("HEAD", url, {}, false);
-    if (!response.isOk) return;
-    return url;
+    const responses = batchFetchJson(
+        sportKeys.map((key) => new URL(`${baseUrl}${key}.svg`)),
+        "HEAD",
+    );
+
+    return responses.reduce((acc, response, index) => {
+        if (response.isOk) {
+            acc[sportKeys[index]] = `${baseUrl}${sportKeys[index]}.svg`;
+        }
+        return acc;
+    }, {} as Record<string, string>);
 };

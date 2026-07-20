@@ -1,4 +1,4 @@
-import { getAuthor } from "./author";
+import { getAuthors } from "./author";
 import {
     getEventDetailsUrl,
     getEventPageUrl,
@@ -10,17 +10,12 @@ import { getConfig, getSettings } from "./state";
 import type { EventDetail } from "./types/eventDetail.types";
 
 export const fetchEventDetails = (eventIds: string[]) => {
-    if (eventIds.length === 0) return {};
+    if (eventIds.length === 0) return [];
     try {
-        const out: Record<string, any> = {};
-        const data = fetchJson<EventDetail[]>(getEventDetailsUrl(eventIds));
-        for (const detail of data) {
-            if (detail.eventItemId) out[detail.eventItemId] = detail;
-        }
-        return out;
+        return fetchJson<EventDetail[]>(getEventDetailsUrl(eventIds));
     } catch (e) {
         log("SRF: failed to load event details: " + e);
-        return {};
+        return [];
     }
 };
 
@@ -32,18 +27,29 @@ export const sortEventDetails = (a: EventDetail, b: EventDetail) => {
     return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
 };
 
-export const getPlatformVideo = (detail: EventDetail) => {
-    return new PlatformVideo({
-        id: new PlatformID(PLATFORM, detail.eventItemId, getConfig("id")),
-        name: detail.title || "Event " + detail.eventItemId,
-        thumbnails: new Thumbnails([new Thumbnail(detail.imageUrl)]),
-        author: getAuthor(detail.sport),
-        uploadDate: Math.floor(new Date(detail.startDate).getTime() / 1000),
-        duration: Math.floor(detail.duration / 1000),
-        viewCount: 0,
-        url: getEventPageUrl(detail.sport, detail.eventItemId),
-        isLive: detail.category === "present" || detail.category === "future",
-    });
+export const getPlatformVideos = (details: EventDetail[]) => {
+    const authorKeys = [...new Set(details.map((d) => d.sport))];
+    const authors = getAuthors(authorKeys);
+
+    const configId = getConfig("id");
+    return details.map(
+        (detail) =>
+            new PlatformVideo({
+                id: new PlatformID(PLATFORM, detail.eventItemId, configId),
+                name: detail.title || "Event " + detail.eventItemId,
+                thumbnails: new Thumbnails([new Thumbnail(detail.imageUrl)]),
+                author: authors[detail.sport],
+                uploadDate: Math.floor(
+                    new Date(detail.startDate).getTime() / 1000,
+                ),
+                duration: Math.floor(detail.duration / 1000),
+                viewCount: 0,
+                url: getEventPageUrl(detail.sport, detail.eventItemId),
+                isLive:
+                    detail.category === "present" ||
+                    detail.category === "future",
+            }),
+    );
 };
 
 export const getAuthHlsUrl = (detail: EventDetail) => {
@@ -61,5 +67,5 @@ export const getAuthHlsUrl = (detail: EventDetail) => {
         Math.floor(new Date(detail.endDate).getTime() / 1000).toString(),
     );
 
-    return hlsUrl.toString()
+    return hlsUrl.toString();
 };

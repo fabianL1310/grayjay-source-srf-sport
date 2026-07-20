@@ -312,7 +312,7 @@ interface HttpHeaders {
   [key: string]: string;
 }
 
-declare class HttpResponse {
+declare class BridgeHttpResponse {
   url: string;
   code: number;
   headers: HttpHeaders;
@@ -320,9 +320,20 @@ declare class HttpResponse {
   isOk: boolean;
 }
 
+declare class BatchBuilder {
+  GET(url: String, headers: Map<String, String>, useAuthClient: Boolean): BatchBuilder;
+  POST(url: String, body: String, headers: Map<String, String>, useAuthClient: Boolean): BatchBuilder;
+  request(method: String, url: String, headers: Map<String, String>, useAuthClient: Boolean): BatchBuilder;
+  requestWithBody(method: String, url: String, body: String, headers: Map<String, String>, useAuthClient: Boolean): BatchBuilder;
+  execute(): BridgeHttpResponse[];
+}
+
 declare class Http {
-  GET(url: string, headers: HttpHeaders, useAuth?: boolean): HttpResponse;
-  request(method: string, url: string, headers: HttpHeaders, useAuth?: boolean): HttpResponse;
+  GET(url: String, headers: Map<String, String>, useAuthClient: Boolean): BridgeHttpResponse;
+  POST(url: String, body: String, headers: Map<String, String>, useAuthClient: Boolean): BridgeHttpResponse;
+  request(method: String, url: String, headers: Map<String, String>, useAuthClient: Boolean): BridgeHttpResponse;
+  requestWithBody(method: String, url: String, body: String, headers: Map<String, String>, useAuthClient: Boolean): BridgeHttpResponse;
+  batch(): BatchBuilder;
 }
 
 const http: Http;

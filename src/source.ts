@@ -1,9 +1,9 @@
 import { EVENT_PAGE_BASE_URL, getEventsUrl } from "./constants";
 import {
     fetchEventDetails,
-    getPlatformVideo,
     getAuthHlsUrl,
     sortEventDetails,
+    getPlatformVideos,
 } from "./eventDetails";
 import { fetchJson } from "./helpers";
 import { getConfig, getSettings, setConfig, setSettings } from "./state";
@@ -29,10 +29,7 @@ source.getHome = (): VideoPager => {
 
     const ids = events.map((event) => event.id);
     const details = fetchEventDetails(ids);
-
-    const videos = Object.values(details)
-        .sort(sortEventDetails)
-        .map(getPlatformVideo);
+    const videos = getPlatformVideos(details.sort(sortEventDetails));
 
     return new VideoPager(videos, false, {});
 };
@@ -41,10 +38,10 @@ source.getContentDetails = (url: string): PlatformVideoDetails => {
     const eventId = url.split("/").pop();
     if (!eventId) throw new ScriptException("Invalid event URL: " + url);
 
-    const detail = fetchEventDetails([eventId])[eventId];
+    const detail = fetchEventDetails([eventId])[0];
     if (!detail) throw new ScriptException("Event not found: " + eventId);
 
-    const plattformVideo = getPlatformVideo(detail);
+    const plattformVideo = getPlatformVideos([detail])[0];
     const videoSource: {
         hls: HLSSource | null;
         dash: DashSource | null;

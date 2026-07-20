@@ -14,6 +14,28 @@
       throw new ScriptException("Invalid JSON from " + url + ": " + e);
     }
   };
+  var batchFetchJson = (urls, method = "GET") => {
+    const batch = urls.reduce(
+      (batch2, url) => batch2.request(method, url.toString(), {}, false),
+      http.batch()
+    );
+    const responses = batch.execute();
+    return responses.map((response, i) => {
+      if (method === "HEAD") {
+        return response;
+      }
+      try {
+        return {
+          ...response,
+          body: JSON.parse(response.body)
+        };
+      } catch (e) {
+        throw new ScriptException(
+          "Invalid JSON from " + urls[i] + ": " + e
+        );
+      }
+    });
+  };
   var getDateString = (date = /* @__PURE__ */ new Date()) => {
     const pad = (n) => String(n).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -76,38 +98,54 @@
   }
 
   // src/author.ts
-  var getAuthor = (key) => {
-    const sport = fetchJson(getSportUrl(key));
-    return new PlatformAuthorLink(
-      new PlatformID(PLATFORM, sport.key, getConfig("id")),
-      // TODO use language set in settings
-      sport.name.de,
-      // TODO
-      `https://sport.api.swisstxt.ch/v1/sports/${sport.key}`,
-      getSportIconUrl(sport.key)
+  var getAuthors = (keys) => {
+    const icons = getSportIconUrls(keys);
+    const sports = batchFetchJson(keys.map(getSportUrl)).map((res) => res.body).reduce((acc, sport) => {
+      sport.iconUrl = icons[sport.key];
+      acc[sport.key] = sport;
+      return acc;
+    }, {});
+    const configId = getConfig("id");
+    return keys.reduce(
+      (acc, key) => {
+        const sport = sports[key];
+        if (!sport) return acc;
+        acc[key] = new PlatformAuthorLink(
+          new PlatformID(PLATFORM, sport.key, configId),
+          // TODO use language set in settings
+          sport.name.de,
+          // TODO
+          `https://sport.api.swisstxt.ch/v1/sports/${sport.key}`,
+          sport.iconUrl
+        );
+        return acc;
+      },
+      {}
     );
   };
-  var getSportIconUrl = (sportKey) => {
+  var getSportIconUrls = (sportKeys) => {
     const sourceUrl = getConfig("sourceUrl");
-    const url = `${sourceUrl.slice(0, sourceUrl.lastIndexOf("/"))}/dist/icons/${sportKey}.svg`;
-    const response = http.request("HEAD", url, {}, false);
-    if (!response.isOk) return;
-    return url;
+    const baseUrl = `${sourceUrl.slice(0, sourceUrl.lastIndexOf("/"))}/dist/icons/`;
+    const responses = batchFetchJson(
+      sportKeys.map((key) => new URL(`${baseUrl}${key}.svg`)),
+      "HEAD"
+    );
+    return responses.reduce((acc, response, index) => {
+      if (response.isOk) {
+        acc[sportKeys[index]] = `${baseUrl}${sportKeys[index]}.svg`;
+      }
+      return acc;
+    }, {});
   };
 
   // src/eventDetails.ts
   var fetchEventDetails = (eventIds) => {
-    if (eventIds.length === 0) return {};
+    if (eventIds.length === 0) return [];
     try {
-      const out = {};
-      const data = fetchJson(getEventDetailsUrl(eventIds));
-      for (const detail of data) {
-        if (detail.eventItemId) out[detail.eventItemId] = detail;
-      }
-      return out;
+      return fetchJson(getEventDetailsUrl(eventIds));
     } catch (e) {
       log("SRF: failed to load event details: " + e);
-      return {};
+      return [];
     }
   };
   var sortEventDetails = (a, b) => {
@@ -117,18 +155,25 @@
     }
     return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
   };
-  var getPlatformVideo = (detail) => {
-    return new PlatformVideo({
-      id: new PlatformID(PLATFORM, detail.eventItemId, getConfig("id")),
-      name: detail.title || "Event " + detail.eventItemId,
-      thumbnails: new Thumbnails([new Thumbnail(detail.imageUrl)]),
-      author: getAuthor(detail.sport),
-      uploadDate: Math.floor(new Date(detail.startDate).getTime() / 1e3),
-      duration: Math.floor(detail.duration / 1e3),
-      viewCount: 0,
-      url: getEventPageUrl(detail.sport, detail.eventItemId),
-      isLive: detail.category === "present" || detail.category === "future"
-    });
+  var getPlatformVideos = (details) => {
+    const authorKeys = [...new Set(details.map((d) => d.sport))];
+    const authors = getAuthors(authorKeys);
+    const configId = getConfig("id");
+    return details.map(
+      (detail) => new PlatformVideo({
+        id: new PlatformID(PLATFORM, detail.eventItemId, configId),
+        name: detail.title || "Event " + detail.eventItemId,
+        thumbnails: new Thumbnails([new Thumbnail(detail.imageUrl)]),
+        author: authors[detail.sport],
+        uploadDate: Math.floor(
+          new Date(detail.startDate).getTime() / 1e3
+        ),
+        duration: Math.floor(detail.duration / 1e3),
+        viewCount: 0,
+        url: getEventPageUrl(detail.sport, detail.eventItemId),
+        isLive: detail.category === "present" || detail.category === "future"
+      })
+    );
   };
   var getAuthHlsUrl = (detail) => {
     const hlsUrl = new URL(detail.hls);
@@ -164,15 +209,15 @@
     if (!events.length) return new VideoPager([], false, {});
     const ids = events.map((event) => event.id);
     const details = fetchEventDetails(ids);
-    const videos = Object.values(details).sort(sortEventDetails).map(getPlatformVideo);
+    const videos = getPlatformVideos(details.sort(sortEventDetails));
     return new VideoPager(videos, false, {});
   };
   source.getContentDetails = (url) => {
     const eventId = url.split("/").pop();
     if (!eventId) throw new ScriptException("Invalid event URL: " + url);
-    const detail = fetchEventDetails([eventId])[eventId];
+    const detail = fetchEventDetails([eventId])[0];
     if (!detail) throw new ScriptException("Event not found: " + eventId);
-    const plattformVideo = getPlatformVideo(detail);
+    const plattformVideo = getPlatformVideos([detail])[0];
     const videoSource = {
       hls: null,
       dash: null,

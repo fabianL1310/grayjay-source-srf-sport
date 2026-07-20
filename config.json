@@ -7,7 +7,7 @@
   "sourceUrl": "https://raw.githubusercontent.com/fabianL1310/grayjay-source-srf-sport/refs/heads/main/config.json",
   "repositoryUrl": "https://github.com/fabianL1310/grayjay-source-srf-sport",
   "scriptUrl": "./dist/script.js",
-  "version": 5,
+  "version": 6,
   "iconUrl": "./icon.png",
   "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3e",
   "packages": ["Http"],
