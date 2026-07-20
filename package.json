@@ -1,7 +1,8 @@
 {
   "scripts": {
     "build": "node build.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sign": "./sign-script.sh dist/script.js"
   },
   "devDependencies": {
     "esbuild": "0.28.1",
