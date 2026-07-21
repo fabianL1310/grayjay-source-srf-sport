@@ -14,9 +14,21 @@ export const STREAM_URL = "https://srgssrlsvech-d.akamaized.net";
 export const EVENT_PAGE_BASE_URL = "https://www.srf.ch/sport/resultcenter/live";
 export const SPORT_PAGE_BASE_URL = "https://www.srf.ch/sport/";
 
-export const getSportUrl = (sportKey: string) => {
+export const getSportUrl = ({
+    sportKey,
+    language,
+}: {
+    sportKey?: string;
+    language?: "de" | "fr" | "if" | null;
+} = {}) => {
     const url = new URL(SPORTS_LIST_URL);
-    url.pathname += `/${sportKey}`;
+    if (sportKey) url.pathname += `/${sportKey}`;
+
+    if (language === null) {
+        url.searchParams.set("lang", "0");
+    } else if (language) {
+        url.searchParams.set("lang", language);
+    }
     return url;
 };
 
@@ -37,13 +49,21 @@ export const getTokenUrl = (hlsUrl: URL) => {
     return tokenUrl;
 };
 
-export const getEventsUrl = (daysDelta = 0) => {
-    const date = new Date(Date.now() + 24 * 60 * 60 * 1000 * daysDelta);
+export const getEventsUrl = (daysDelta?: number, sportId?: string, language?: "de" | "fr" | "it" | null) => {
     const url = new URL(EVENTS_URL);
-    if (daysDelta) url.searchParams.set("date", getDateString(date));
-    return url
+    if (daysDelta) {
+        const date = new Date(Date.now() + 24 * 60 * 60 * 1000 * daysDelta);
+        url.searchParams.set("date", getDateString(date));
+    }
+    if (sportId) url.searchParams.set("sportId", sportId);
+    if (language === null) {
+        url.searchParams.set("lang", "0");
+    } else if (language) {
+        url.searchParams.set("lang", language);
+    }
+    return url;
 };
 
 export const getSportPageUrl = (sportKey: string) => {
     return `${SPORT_PAGE_BASE_URL}${sportKey}`;
-}
+};

@@ -1,4 +1,4 @@
-import { getAuthors } from "./author";
+import { getAuthors, getSportIdByKey } from "./author";
 import {
     EVENT_PAGE_BASE_URL,
     getEventsUrl,
@@ -40,8 +40,17 @@ source.getHome = (): VideoPager => {
 
     const ids = events.map((event) => event.id);
     const details = fetchEventDetails(ids);
-    const videos = getPlatformVideos(details.sort(sortEventDetails));
 
+    if (getSettings("showStartTimeInTitle")) {
+        details.forEach((detail) => {
+            const startTime = events.find(
+                (event) => event.id === +detail.eventItemId,
+            ).dateTimeInfo.time;
+            detail.title = `[${startTime}] ${detail.title}`;
+        });
+    }
+
+    const videos = getPlatformVideos(details.sort(sortEventDetails));
     return new VideoPager(videos, false, {});
 };
 
@@ -55,6 +64,22 @@ source.getContentDetails = (url: string): PlatformVideoDetails => {
 
     const detail = fetchEventDetails([eventId])[0];
     if (!detail) throw new ScriptException("Event not found: " + eventId);
+
+    if (getSettings("showStartTimeInTitle")) {
+      const sportId = getSportIdByKey(detail.sport)
+      const daysDelta = new Date(detail.startDate).getDate() - new Date().getDate();
+      const events = fetchJson<{
+        id: number;
+        dateTimeInfo: {
+          time: string;
+        };
+        }[]>(getEventsUrl(daysDelta,sportId, null));
+
+      const startTime = events.find((event) => event.id === +detail.eventItemId)?.dateTimeInfo.time;
+      if (startTime) {
+        detail.title = `[${startTime}] ${detail.title}`;
+      }
+    }
 
     const plattformVideo = getPlatformVideos([detail])[0];
     const videoSource: {

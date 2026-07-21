@@ -49,9 +49,17 @@
   var TOKEN_URL = "https://tp.srgssr.ch/akahd/token";
   var EVENT_PAGE_BASE_URL = "https://www.srf.ch/sport/resultcenter/live";
   var SPORT_PAGE_BASE_URL = "https://www.srf.ch/sport/";
-  var getSportUrl = (sportKey) => {
+  var getSportUrl = ({
+    sportKey,
+    language
+  } = {}) => {
     const url = new URL(SPORTS_LIST_URL);
-    url.pathname += `/${sportKey}`;
+    if (sportKey) url.pathname += `/${sportKey}`;
+    if (language === null) {
+      url.searchParams.set("lang", "0");
+    } else if (language) {
+      url.searchParams.set("lang", language);
+    }
     return url;
   };
   var getEventDetailsUrl = (eventIds) => {
@@ -68,10 +76,18 @@
     tokenUrl.searchParams.set("acl", acl);
     return tokenUrl;
   };
-  var getEventsUrl = (daysDelta = 0) => {
-    const date = new Date(Date.now() + 24 * 60 * 60 * 1e3 * daysDelta);
+  var getEventsUrl = (daysDelta, sportId, language) => {
     const url = new URL(EVENTS_URL);
-    if (daysDelta) url.searchParams.set("date", getDateString(date));
+    if (daysDelta) {
+      const date = new Date(Date.now() + 24 * 60 * 60 * 1e3 * daysDelta);
+      url.searchParams.set("date", getDateString(date));
+    }
+    if (sportId) url.searchParams.set("sportId", sportId);
+    if (language === null) {
+      url.searchParams.set("lang", "0");
+    } else if (language) {
+      url.searchParams.set("lang", language);
+    }
     return url;
   };
   var getSportPageUrl = (sportKey) => {
@@ -104,7 +120,9 @@
   // src/author.ts
   var getAuthors = (keys) => {
     const icons = getSportIconUrls(keys);
-    const sports = batchFetchJson(keys.map(getSportUrl)).map((res) => res.body).reduce((acc, sport) => {
+    const sports = batchFetchJson(
+      keys.map((key) => getSportUrl({ sportKey: key }))
+    ).reduce((acc, { body: sport }) => {
       sport.iconUrl = icons[sport.key];
       acc[sport.key] = sport;
       return acc;
@@ -139,6 +157,18 @@
       }
       return acc;
     }, {});
+  };
+  var getSportIdByKey = (key) => {
+    const sports = fetchJson(
+      getSportUrl({
+        language: null
+      })
+    );
+    const sport = sports.find((s) => s.key === key);
+    if (!sport) {
+      throw new Error(`Sport with key ${key} not found`);
+    }
+    return sport.id;
   };
 
   // src/eventDetails.ts
@@ -215,6 +245,14 @@
     if (!events.length) return new VideoPager([], false, {});
     const ids = events.map((event) => event.id);
     const details = fetchEventDetails(ids);
+    if (getSettings("showStartTimeInTitle")) {
+      details.forEach((detail) => {
+        const startTime = events.find(
+          (event) => event.id === +detail.eventItemId
+        ).dateTimeInfo.time;
+        detail.title = `[${startTime}] ${detail.title}`;
+      });
+    }
     const videos = getPlatformVideos(details.sort(sortEventDetails));
     return new VideoPager(videos, false, {});
   };
@@ -222,10 +260,20 @@
     return url.startsWith(EVENT_PAGE_BASE_URL);
   };
   source.getContentDetails = (url) => {
+    var _a;
     const eventId = url.split("/").pop();
     if (!eventId) throw new ScriptException("Invalid event URL: " + url);
     const detail = fetchEventDetails([eventId])[0];
     if (!detail) throw new ScriptException("Event not found: " + eventId);
+    if (getSettings("showStartTimeInTitle")) {
+      const sportId = getSportIdByKey(detail.sport);
+      const daysDelta = new Date(detail.startDate).getDate() - (/* @__PURE__ */ new Date()).getDate();
+      const events = fetchJson(getEventsUrl(daysDelta, sportId, null));
+      const startTime = (_a = events.find((event) => event.id === +detail.eventItemId)) == null ? void 0 : _a.dateTimeInfo.time;
+      if (startTime) {
+        detail.title = `[${startTime}] ${detail.title}`;
+      }
+    }
     const plattformVideo = getPlatformVideos([detail])[0];
     const videoSource = {
       hls: null,

@@ -26,6 +26,13 @@
       "description": "Show events that are currently live at the top",
       "type": "Boolean",
       "default": "true"
+    },
+    {
+      "variable": "showStartTimeInTitle",
+      "name": "Show event start time in event title",
+      "description": "Show the start time of events in their titles, e.g. '[20:00] Event Name'",
+      "type": "Boolean",
+      "default": "true"
     }
   ]
 }

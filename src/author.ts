@@ -1,13 +1,15 @@
 import { getSportPageUrl, getSportUrl, PLATFORM } from "./constants";
-import { batchFetchJson } from "./helpers";
+import { batchFetchJson, fetchJson } from "./helpers";
 import { getConfig } from "./state";
 import { Author } from "./types/author.types";
 
 export const getAuthors = (keys: string[]) => {
     const icons = getSportIconUrls(keys);
-    const sports = batchFetchJson<Author>(keys.map(getSportUrl))
-        .map((res) => res.body)
-        .reduce((acc, sport) => {
+    // TODO maybe use the url without sports key which returns all sports at once. But only key and name, which should be sufficient
+    const sports = batchFetchJson<Author>(
+        keys.map((key) => getSportUrl({ sportKey: key })),
+    )
+        .reduce((acc, { body: sport }) => {
             sport.iconUrl = icons[sport.key];
             acc[sport.key] = sport;
             return acc;
@@ -46,4 +48,22 @@ const getSportIconUrls = (sportKeys: string[]) => {
         }
         return acc;
     }, {} as Record<string, string>);
+};
+
+export const getSportIdByKey = (key: string): string => {
+    const sports = fetchJson<{
+        id: string;
+        key: string;
+        }[]>(
+        getSportUrl({
+            language: null,
+        }),
+    );
+
+    const sport = sports.find((s) => s.key === key);
+    if (!sport) {
+        throw new Error(`Sport with key ${key} not found`);
+    }
+
+    return sport.id;
 };

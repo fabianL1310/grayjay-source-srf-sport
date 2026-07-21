@@ -7,10 +7,10 @@
   "sourceUrl": "https://raw.githubusercontent.com/fabianL1310/grayjay-source-srf-sport/refs/heads/main/config.json",
   "repositoryUrl": "https://github.com/fabianL1310/grayjay-source-srf-sport",
   "scriptUrl": "./dist/script.js",
-  "version": 9,
+  "version": 10,
   "iconUrl": "./icon.png",
   "id": "3eed670d-c893-4688-9ac8-cb02a0c13f3e",
-  "scriptSignature": "g0rKzVr1+XaZ8aaP+27bHmbbhkjoVXR3HcbVhm+LhfzEMZNbKPhT0pH2hjdWGLxB/2MjI3wI9lwpGkiELoqhsnu0rd5qlDMmDotAsHkViJ3mO78xzPdggUcgJIy8xfyGBDVZMjaOqlZEOlEpL16W5qcRo7FxxUooQr1MTVL7Ft+2HVc4z+Xpy4jc1suiEaE/T+UVYypMx+ye4UN0aQVuV97rMQ5sd1dzo9AnQJ2TPDK9NNcf+rc+QAi2xtJxRCXyvrhmKwFVImE4kX/9y8/djjOLQoiNGjIPiGYfd882zIqyBid5KrQrcvDd0Uo8WFirAHJMugxh/g61zYSOKYzd9AFsSQH+PZc3HRacYy3LhFaXJhyiDgJNP9zurvS8n4tdXD8wGw8LpZENCBYoQamb9UGlpU3hjpTNRiQQKsFtsaaxBC+w+BrY9R7VRvYqhg86Ngnq+Fdjg1ESHjVikYf/4MuH1mUEVB6BDULNZ4V7QzYVCaEEiM9FO5z2XBR6sFtPccByt7zZqtCyqouTw6VHROGT4pU7JCpILQGlFYwP0LWFlaEURlai1G+UGIQCCSrpruCxUYa0FTbbr6/XVixrPYhr7KqN+kBv583sz71Byf+p01hQhrAFwH5AyD7fJVV8Fs+EoOpCfKYBQ61IUELRHRDFPNYKJiNWdkJwcecYzbY=",
+  "scriptSignature": "DYEjssY5Xf6+CdXOCE2CGrkwjXEAtDpoNIaTov29Ihl+ZBrX0WG1y1YRNf61eivy5qDQIJMBp4dqzOO259LlpHinRtLHIZWcnh2bZi5D1ZPF2EsMaizPpS7VC+iwJdzOLcHrpygI4LPM6ohm85muJCoZ1gZWuOi0cO7q4MXuQAFWaOlKfGpqO9VqLreW9fV4FZUjK5cCRKycIqZW+MzClf1Qop39v12X2MDufhpq52a4KrMiYqi+M1rl4/ces5+h71bBwVnIjXJnkdl5FQ+Cje3rvye3yfHVB+zen70jrBoT1lAyXXwn9Bmf7MXsrtn6oXNCk15WOxXmxtGHbc47GCttL0Mz1s57G2CMaLXsVODvyjV9HGaAqZMyYljUPAqxXO1saqaxEMrJAWJoY+WdA/croPt2o0DycysngukgwebFyPZQYMHoTH5i9WTev4cODi8sYahFmkIlCL4L40753JHe4+72JXFnhp6AJYWqsG8LA0m+6+TZeAFWZ2noXF2O4OTKiRFhTSxaGP42r0UVI1nVAO21cXlBBl8iObFHMnN7GZWBPTA1umANBa8W53NTLuoTyw9hePeSTISt45RQJGPHbJtLRuyeIMAqUTCQ0hpZVmU7c9Lmb5qsRA+bOzE5r3fS21ZRU34lXnEaW7VF+sz7l5bLR1y+WEPTyrbcAkg=",
   "scriptPublicKey": "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAs7OnHhT24EgrqaUdYeS/LXtmuhlSCLnHvK8rt4No4OPwgKx6Pr1aMvtlnfrVuqL9+VYcAm1RJgWqh5uVMoBY/cFSAi6cFgyom1mclwEsLYxO6040RVvCz1vFiAHoyLK2pxHllAtSr2b5NMCp2HyOpES5g9dzQRX4bx68I1ceUSPYYP5hsJ9wFn5a1Zo0fuQMM2QuXTlF3iW/dFdGfTx1j6gg+fckMkUZgBb+iqbEqx7O5weKQBvqNmbBpBuE4mN7UkA+ojzrUwT9QWKTlQAAR+mJXJ44yDuja5eJndbEJRV0ojPcZgW/+N+YJlREbLpwoxBcnVBiS8u/jjmfi1177jTaSAtaNbppzgubEUyLZANHp0iaVqDlgvz4MiUQgr61mStYfNsXs8WLYXReN8ktOHrTHUHfDgbF9kb3QCRChP1ACfJM45FELnV5ymv7j/Hry00qRF0eky0+e0rZvFd8pUVlPJxyhvkb1MKCrKO9D/JPvtqO4LfDBcS2r5YE/adxeTzZX+ACl97iysqkfCj6GKD2z9GG+6yLQABdjPryCDI0Kn5HqVVg0jmUZGOhDqqBoDSjXh9QdYB65h0CAJTvdVX20BYT1bDRoAzcE6ozxlbw9Q/XLJhFzxF62ND2tmy/fqnTqaj1KhrvW9u+NaWwtONf+zmGUmcV7O/19z+ROEkCAwEAAQ==",
   "packages": ["Http"],
   "allowEval": false,
@@ -26,6 +26,13 @@
       "variable": "showLiveFirst",
       "name": "Show live events first",
       "description": "Show events that are currently live at the top",
+      "type": "Boolean",
+      "default": "true"
+    },
+    {
+      "variable": "showStartTimeInTitle",
+      "name": "Show event start time in event title",
+      "description": "Show the start time of events in their titles, e.g. '[20:00] Event Name'",
       "type": "Boolean",
       "default": "true"
     }
